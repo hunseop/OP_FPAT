@@ -508,3 +508,242 @@ def organize_redundant_file():
     notice_df.to_excel(notice_excel_path, index=False, engine='openpyxl')
     delete_df.to_excel(delete_excel_path, index=False, engine='openpyxl')
 
+def add_mis_id():
+    print("select policy file")
+    file = select_xlsx_files()
+    print("select mis id file")
+    mis_df = pd.read_csv(select_xlsx_files(".csv"))
+    rule_df = pd.read_excel(file)
+
+    mis_df_unique = mis_df.drop_duplicates(subset=['ruleset_id'], keep='first')
+
+    mis_id_map = mis_df_unique.set_index('ruleset_id')['mis_id']
+
+    rule_df['MIS ID'] = rule_df.apply(lambda row: mis_id_map.get(row['Ruleset ID'], row['MIS ID']) if pd.isna(row['MIS ID']) or row['MIS ID'] == '' else row['MIS ID'], axis=1)
+
+    rule_df.to_excel(update_version(file, False), index=False, engine='openpyxl')
+
+def notice_file_organizeation():
+    def expired_used(df, selected_file):
+        filtered_df = df[
+            ((df['예외'].isna()) | (df['예외'] == '신규정책')) &
+            (df['중복여부'].isna()) &
+            (df['신청이력'] != 'Unknown') &
+            (df['만료여부'] == '만료') &
+            (df['미사용여부'] == '사용')
+        ]
+
+        selected_df = filtered_df[COLUMNS]
+        selected_df = selected_df.astype(str)
+
+        for date_column in DATE_COLUMNS:
+            selected_df[date_column] = pd.to_datetime(selected_df[date_column]).dt.strftime('%Y-%m-%d')
+        
+        selected_df.rename(TRANSLATED_COLUMNS, inplace=True)
+        selected_df.fillna('', inplace=True)
+        selected_df.replace('nan', '', inplace=True)
+        
+        type = '만료_사용정책'
+        filename = str(remove_extension(selected_file)) + '_기간만료(공지용).xlsx'
+        selected_df.to_excel(filename, index=False, na_rep='', sheet_name=type)
+        save_to_excel(selected_df, type, filename)
+
+    def expired_unused(df, selected_file):
+        filtered_df = df[
+            ((df['예외'].isna()) | (df['예외'] == '신규정책')) &
+            (df['중복여부'].isna()) &
+            (df['신청이력'] != 'Unknown') &
+            (df['만료여부'] == '만료') &
+            (df['미사용여부'] == '미사용')
+        ]
+
+        selected_df = filtered_df[COLUMNS]
+        selected_df = selected_df.astype(str)
+
+        for date_column in DATE_COLUMNS:
+            selected_df[date_column] = pd.to_datetime(selected_df[date_column]).dt.strftime('%Y-%m-%d')
+        
+        selected_df.rename(TRANSLATED_COLUMNS, inplace=True)
+        selected_df.fillna('', inplace=True)
+        selected_df.replace('nan', '', inplace=True)
+
+        type = '만료_미사용정책'
+        filename = str(remove_extension(selected_file)) + '_만료_미사용정책(공지용).xlsx'
+        selected_df.to_excel(filename, index=False, na_rep='', sheet_name=type)
+        save_to_excel(selected_df, type, filename)
+
+    def longterm_unused_rules(df, selected_file):
+        filtered_df = df[
+            (df['예외'].isna()) &
+            (df['중복여부'].isna()) &
+            (df['신청이력'] != 'Unknown') &
+            (df['만료여부'] == '미만료') &
+            (df['미사용여부'] == '미사용')
+        ]
+
+        selected_df = filtered_df[COLUMNS]
+        selected_df = selected_df.astype(str)
+
+        for date_column in DATE_COLUMNS:
+            selected_df[date_column] = pd.to_datetime(selected_df[date_column]).dt.strftime('%Y-%m-%d')
+        
+        selected_df.rename(TRANSLATED_COLUMNS, inplace=True)
+        selected_df.fillna('', inplace=True)
+        selected_df.replace('nan', '', inplace=True)
+
+        type = '미만료_미사용정책'
+        filename = str(remove_extension(selected_file)) + '_장기미사용정책(공지용).xlsx'
+        selected_df.to_excel(filename, index=False, na_rep='', sheet_name=type)
+        save_to_excel(selected_df, type, filename)
+
+    def no_history_unused(df, selected_file):
+        filtered_df = df[
+            (df['예외'].isna()) &
+            (df['중복여부'].isna()) &
+            (df['신청이력'] != 'Unknown') &
+            (df['만료여부'] == '만료') &
+            (df['미사용여부'] == '미사용')
+        ]
+
+        selected_df = filtered_df[COLUMNS]
+        selected_df = selected_df.astype(str)
+
+        for date_column in DATE_COLUMNS:
+            selected_df[date_column] = pd.to_datetime(selected_df[date_column]).dt.strftime('%Y-%m-%d')
+        
+        selected_df.rename(TRANSLATED_COLUMNS, inplace=True)
+        selected_df.fillna('', inplace=True)
+        selected_df.replace('nan', '', inplace=True)
+
+        type = '이력없는_미사용정책'
+        filename = str(remove_extension(selected_file)) + '_이력없는_미사용정책.xlsx'
+        selected_df.to_excel(filename, index=False, na_rep='', sheet_name=type)
+        save_to_excel(selected_df, type, filename)
+
+    print("분류할 정책파일을 선택하세요.")
+    selected_file = select_xlsx_files()
+    logging.ingo("정책 분류 시작")
+    try:
+        df = pd.read_excel(selected_file)
+        try:
+            expired_used(df, selected_file)
+            logging.info("기간만료 분류 완료")
+        except:
+            logging.error("기간만료 분류 실패")
+        try:
+            expired_unused(df, selected_file)
+            logging.info("만료/미사용 분류 완료")
+        except:
+            logging.error("만료/미사용 분류 실패")
+        try:
+            longterm_unused_rules(df, selected_file)
+            logging.info("장기미사용 분류 완료")
+        except:
+            logging.error("장기미사용 분류 실패")
+        try:
+            no_history_unused(df, selected_file)
+            logging.info("이력없는 미사용 분류 완료")
+        except:
+            logging.error("이력없는 미사용 실패")
+        logging.info("정책 분류 완료")
+    except:
+        logging.error("정책 분류 실패")
+
+# def app_info_processing():
+#     def parse_group_df(df):
+#         expected_columns = [
+#             '신청번호',
+#             '시작일',
+#             '종료일',
+#             '제목',
+#             'REQUEST_STATUS',
+#             '진행상태',
+#             '신청자 ID',
+#             '신청자 이메일',
+#             '신청자명',
+#             '신청자 부서',
+#             '기안자 ID',
+#             '기안자 이메일',
+#             '기안자명',
+#             '기안자 부서',
+#             '결재자ID',
+#             '결재자 이메일',
+#             '결재자명',
+#             '결재자 부서',
+#             'REQUEST_DATE',
+#             'MIS_ID'
+#         ]
+
+#         actual_columns = df.columns.tolist()
+
+#         if not actual_columns == expected_columns:
+#             exit("컬럼명 불일치")
+        
+#         df = df.drop(columns=['진행상태'])
+
+#         cols = df.columns.tolist()
+#         columns_to_move = 'REQUEST_STATUS'
+#         insert_before = 'MIS_ID'
+
+#         cols.remove(columns_to_move)
+#         insert_index = cols.index(insert_before)
+        
+#         cols.insert(insert_index, columns_to_move)
+#         df = df[cols]
+
+#         columns_to_rename = {
+
+#         }
+
+def select_task():
+    print("시작할 작업 번호를 입력해주세요.")
+    print("1. Description에서 신청번호 파싱하기")
+    print("2. 정책파일에서 신청번호 추출하기")
+    print("3. 정책파일에서 신청정보 추가하기")
+    print("4. 팔로알토 정책에서 예외처리하기")
+    print("5. 시큐아이 정책에서 예외처리하기")
+    print("6. 중복정책 공지/삭제 분류하기")
+    print("7. 정리대상 별 공지파일 분류하기")
+    print("8. 정책파일에서 MIS ID 추가하기")
+    print("0. 종료")
+
+    while True:
+        try:
+            choice = int(input("작업 번호 (1-9, 종료: 0)"))
+            if 1 <= choice <= 9:
+                return choice
+            elif choice == 0:
+                exit('exit')
+            else:
+                print('invalid number')
+        except ValueError:
+            print("Invalid input")
+
+def deletion_process_main():
+    start_task = select_task()
+
+    try:
+        logging.info(f"Starting deletion process")
+        if start_task == 1:
+            parse_request_type()
+        elif start_task <= 2:
+            extract_request_id()
+        elif start_task <= 3:
+            add_request_info()
+        elif start_task <= 4:
+            paloalto_exception()
+        elif start_task <= 5:
+            secui_exception()
+        elif start_task <= 6:
+            organize_redundant_file()
+        elif start_task <= 7:
+            notice_file_organizeation()
+        elif start_task <= 8:
+            add_mis_id()
+        else:
+            logging.info("Exiting deletion process")
+            exit()
+        logging.info("Completed deletion process")
+    
+    except Exception as e:
+        logging.exception(f"Exception in deletion process : {e}")
