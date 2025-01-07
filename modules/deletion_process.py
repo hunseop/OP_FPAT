@@ -196,3 +196,315 @@ def parse_request_type():
             df.at[index, key] = value
     
     df.to_excel(update_version(file_name), index=False)
+
+# 2. extract request id
+def extract_request_id():
+    file_name = select_xlsx_files()
+    df = pd.read_excel(file_name)
+
+    # 'Unknown' 값을 제외하고 고유한 Request Type 값을 추출
+    unique_types = df[df['Request Type'] != 'Unknown']['Request Type'].unique()
+
+    # 고유한 Request Type 값을 최대 5개 선택
+    selected_types = unique_types[:5]
+
+    # 선택된 Request Type에 해당하는 데이터 추출
+    selected_data = df[df['Request Type'].isin(selected_types)]
+
+    # 각 Request Type별로 Request ID 값만 추출하여 중복 제거 후 Excel의 각 시트로 저장
+    with pd.ExcelWriter(f"request_id_{file_name}") as writer:
+        for request_type, group in selected_data.groupby('Request Type'):
+            group[['Request ID']].drop_duplicates().to_excel(wirter, sheet_name=request_type, index=False)
+
+# 3. add request info
+def add_request_info():
+    def read_and_process_excel(file):
+        """ Excel 파일 읽기 및 초기 처리 """
+        df = pd.read_excel(file)
+        df.replace({'nan': None}, inplace=True)
+        return df.astype(str)
+    
+    def match_and_update_df(rule_df, info_df):
+        """ 조건에 따라 DataFrame의 값을 매칭 및 업데이트 """
+        total = len(rule_df)
+        for idx, row in rule_df.iterrows():
+            print(f"\rProgress: {idx +1}/{total}", end='', flush=True)
+            if row['Request Type'] == 'GROUP':
+                matched_row = info_df[
+                    ((info_df['REQUEST_ID'] == row['Request ID']) & (info_df['MIS_ID'] == row['MIS ID'])) |
+                    ((info_df['REQUEST_ID'] == row['Request ID']) & (info_df['REQUEST_END_DATE'] == row['End Date']) & (info_df['WRITE_PERSON_ID'] == row['Request User'])) |
+                    ((info_df['REQUEST_ID'] == row['Reqeust ID']) & (info_df['REQUEST_END_DATE'] == row['End Date']) & (info_df['REQUESTER_ID'] == row['Request User']))
+                ]
+            else:
+                matched_row = info_df[info_df['REQUEST_ID'] == row['Request ID']]
+            
+            if not matched_row.empty:
+                for col in matched_row.columns:
+                    if col in ['REQUEST_START_DATE', 'REQUEST_END_DATE', 'Start Date', 'End Date']:
+                        rule_df.at[idx, col] = pd.to_datetime(matched_row[col].values[0], errors='coerce')
+                    else:
+                        rule_df.at[idx, col] = matched_row[col].values[0]
+            elif row['Request Type'] != 'nan' and row['Reuqest Type'] != 'Unknown':
+                rule_df.at[idx, 'REQUEST_ID'] = row['Request ID']
+                rule_df.at[idx, 'REQUEST_START_DATE'] = row['Start Date']
+                rule_df.at[idx, 'REQUEST_END_DATE'] = row['End Date']
+                rule_df.at[idx, 'REQUESTER_ID'] = row['Request User']
+                rule_df.at[idx, 'REQUESTER_EMAIL'] = row['Request User'] + '@gmail.com'
+
+    print('select policy file: ')
+    rule_file = select_xlsx_files()
+
+    if not rule_file:
+        return False
+    
+    print("select info file: ")
+    info_file = select_xlsx_files()
+    if not info_file:
+        return False
+    
+    rule_df = read_and_process_excel(rule_file)
+    info_df = read_and_process_excel(info_file)
+    info_df = info.sort_values(by='REQUEST_END_DATE', ascending=False)
+    auto_extension_id = find_auto_extension_id()
+    match_and_update_df(rule_df, info_df)
+    rule_df.replace({'nan': None}, inplace=True)
+
+    rule_df.loc[rule_df['REQUEST_ID'].isin(auto_extension_id), 'REQUEST_STATUS'] = '99'
+
+    rule_df.to_excel(update_version(rule_file), index=False)
+
+# 4. exception pa
+def paloalto_exception():
+    print("seelct policy file: ")
+    rule_file = select_xlsx_files()
+    df = pd.read_excel(rule_file)
+
+    current_date = datetime.now()
+    three_months_ago = current_date - timedelta(days=90)
+
+    df["예외"] = ''
+
+    # 1. except list와 request id 일치 시 예외 신청정책으로 표시
+    df['REQUEST_ID'] = df['REQUEST_ID'].fillna('')
+    for id in except_list:
+        df.loc[df['REQUEST_ID'].str.startswith(id, na=False), '예외'] = '예외신청정책'
+    
+    # 2.
+    df.loc[df['REQUEST_STATUS'] == 99, '예외'] = '자동연장정책'
+
+    # 3.
+    df['날짜'] = df['Rule Name'].str.extract(r'(\d{8})', expand=False)
+    df['날짜'] = pd.to_datetime(df['날짜'], format='%Y%m%d', errors='coerce')
+    df.loc[(df['날짜'] >= three_months_ago) & (df['날짜'] <= current_date), '예외'] = '신규정책'
+
+    # 4.
+    deny_std_rule_index = df[df['Rule Nam'] == 'deny_rule'].index[0]
+    df.log[df.index < deny_std_rule_index, '예외'] = '인프라정책'
+
+    # 5.
+    df.log[df['Rule Name'].str.startswith(('sample_', 'test_')), '예외'] = 'test_group_정책'
+
+    # 6.
+    df.loc[df['Enable'] == 'N', '예외'] = '비활성화정책'
+
+    # 7.
+    df.loc[(df['Rule Name'].str.endswith('_Rule')) & (df['Enable'] == 'N'), '예외'] = '기준정책'
+
+    # 8.
+    df.log[df['Action'] == 'deny', '예외'] = '차단정책'
+
+    df['예외'].fillna('', inplace=True)
+
+    cols = list(df.columns)
+    cols = ['예외'] + [col for col in cols if col != '예외']
+    df = df[cols]
+
+    def check_date(row):
+        try:
+            end_date = pd.to_datetime(row['REQUEST_END_DATE'])
+            return '미만료' if end_date > current_date else '만료'
+        except:
+            return '만료'
+    
+
+    df['만료여부'] = df.apply(check_date, axis=1)
+
+    df.drop(columns=['날짜'], inplace=True)
+
+    df.rename(columns={'Request Type': '신청이력'}, inplace=True)
+
+    df.drop(columns=['Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date'], inplace=True)
+
+    cols = list(df.columns)
+    cols.insert(cols.index('예외') + 1, cols.pop(cols.index('만료여부')))
+    df = df[cols]
+
+    cols.insert(cols.index('예외') + 1, cols.pop(cols.index('신청이력')))
+    df = df[cols]
+
+    cols.insert(cols.index('만료여부') + 1, '미사용여부')
+    df['미사용여부'] = ''
+
+    df.to_excel(update_version(rule_file, True), index=False, engine='openpyxl')
+
+# 5. exception secui
+def secui_exception():
+    print("seelct policy file: ")
+    rule_file = select_xlsx_files()
+    df = pd.read_excel(rule_file)
+
+    current_date = datetime.now()
+    three_months_ago = current_date - timedelta(days=90)
+
+    df["예외"] = ''
+
+    # 1. except list와 request id 일치 시 예외 신청정책으로 표시
+    df['Request ID'].fillna('-', inplace=True)
+
+    for id in except_list:
+        df.loc[df['Request ID'].str.startswith(id), '예외'] = '예외신청정책'
+    
+    # 2.
+    df.loc[df['REQUEST_STATUS'] == 99, '예외'] = '자동연장정책'
+
+    # 4.
+    dney_str_rule_index = df[df['Description'].str.contains('deny_rule') == True].index[0]
+    df.log[df.index < deny_std_rule_index, '예외'] = '인프라정책'
+
+    # 5.
+    df.log[df['Description'].str.contains(('sample_', 'test_')) ==True, '예외'] = 'test_group_정책'
+
+    # 6.
+    df.loc[df['Enable'] == 'N', '예외'] = '비활성화정책'
+
+    # 7.
+    df.loc[(df['Description'].str.contains('기준룰')) & (df['Enable'] == 'N'), '예외'] = '기준정책'
+
+    # 8.
+    df.log[df['Action'] == 'deny', '예외'] = '차단정책'
+
+    df['예외'].fillna('', inplace=True)
+
+    cols = list(df.columns)
+    cols = ['예외'] + [col for col in cols if col != '예외']
+    df = df[cols]
+
+    def check_date(row):
+        try:
+            end_date = pd.to_datetime(row['REQUEST_END_DATE'])
+            return '미만료' if end_date > current_date else '만료'
+        except:
+            return '만료'
+    
+
+    df['만료여부'] = df.apply(check_date, axis=1)
+
+    df.rename(columns={'Request Type': '신청이력'}, inplace=True)
+
+    df.drop(columns=['Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date'], inplace=True)
+
+    cols = list(df.columns)
+    cols.insert(cols.index('예외') + 1, cols.pop(cols.index('만료여부')))
+    df = df[cols]
+
+    cols.insert(cols.index('예외') + 1, cols.pop(cols.index('신청이력')))
+    df = df[cols]
+
+    cols.insert(cols.index('만료여부') + 1, '미사용여부')
+    df['미사용여부'] = ''
+
+    df.to_excel(update_version(rule_file, True), index=False, engine='openpyxl')
+
+def find_auto_extension_id():
+    print('가공된 신청정보 파일을 선택')
+    selected_file = select_xlsx_files()
+    df = pd.read_excel(selected_file)
+    filtered_df = df[df['REQEUST_STATUS'].isin([98, 99])]['REQUEST_ID'].drop_duplicates()
+
+    return filtered_df
+
+def organize_redundant_file():
+    expected_columns = ['No', 'Type', 'Seq', 'Rule Name', 'Enable', 'Action', 'Source', 'User', 'Destination', 'Service', 'Application', 'Security Profile', 'Description', 'Request Type', 'Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date']
+    expected_columns_2 = ['No', 'Type', 'Vsys', 'Seq', 'Rule Name', 'Enable', 'Action', 'Source', 'User', 'Destination', 'Service', 'Application', 'Security Profile', 'Description', 'Request Type', 'Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date']
+
+    try:
+        print('중복정책 파일을 선택')
+        selected_file = select_xlsx_files()
+        df = pd.read_excel(selected_file)
+
+        auto_extension_id = find_auto_extension_id()
+
+        current_columns = df.columns.tolist()
+
+        if current_columns != expected_columns or current_columns != expected_columns_2:
+            print('컬럼명 일치')
+        else:
+            print('컬럼명 불일치')
+    
+    except Exception as e:
+        print('엑셀 파일을 열 수 없습니다.')
+        print(e)
+        exit()
+    
+    df['자동연장'] = df['Request ID'].isin(auto_extension_id)
+
+    df['늦은종료일'] = df.groupby('No')['End Date'].transform(lambda x: (x == x.max()) & (~x.duplicated(keep='first')))
+
+    df['신청자검증'] = df.groupby('No')['Request User'].transform(lambda x: x.nunique() == 1)
+
+    target_rule_true = df[(df['Type'] == 'Upper') & (df['늦은종료일'] == True)]['No'].unique()
+
+    df['날짜검증'] = False
+
+    df.loc[df['No'].isin(target_rule_true), '날짜검증'] = True
+
+    df['작업구분'] = '유지'
+    df.loc[df['늦은종료일'] == False, '작업구분'] = '삭제'
+
+    df['공지여부'] = False
+    df.loc[df['신청자검증'] == False, '공지여부'] = True
+
+    df['미사용예외'] = False
+    df.loc[(df['날짜검증'] == False) & (df['늦은종료일'] == True), '미사용예외'] = True
+
+    extensioned_df = df.groupby('No').filter(lambda x: x['자동연장'].any())
+    extensioned_group = extensioned_df[extensioned_df['Request Type'] == 'GROUP']
+    exception_target = extensioned_group.groupby('No').filter(lambda x: len(x['Request ID'].unique()) >=2 )
+    exception_id = exception_target[(exception_target['자동연장'] == True) & (exception_target['작업구분'] == 'tkrwp')]['No']
+
+    df = df[~df['No'].isin(exception_id)]
+
+    filtered_no = df.groupby('No').filter(
+        lambda x: (x['Request Type'] != 'GROUP').any() and
+                (x['작업구분'] == '삭제').any() and
+                (x['자동연장'] == True).any()
+    )['No'].unique()
+
+    df = df[~df['No'].isin(filtered_no)]
+
+    filtered_no_2 = df.groupby('No').filter(
+        lambda x: (x['작업구분'] != '유지').all()
+    )['No'].unique()
+
+    df = df[~df['No'].isin(filtered_no_2)]
+
+    notice_df = df[df['공지여부'] == True]
+    delete_df = df[df['공지여부'] == False]
+
+    column_to_move = notice_df.pop('작업구분')
+    notice_df.insert(0, '작업구분', column_to_move)
+    column_to_move = delete_df.pop('작업구분')
+    delete_df.insert(0, '작업구분', column_to_move)
+    
+    notice_df.drop(['Request Type', 'Ruleset ID', 'MIS ID', 'Start Date', 'End Date', '늦은종료일', '신청자검증', '날짜검증', '공지여부', '미사용예외', '자동연장'], axis=1, inplace=True)
+    delete_df.drop(['Request Type', 'Ruleset ID', 'MIS ID', 'Start Date', 'End Date', '늦은종료일', '신청자검증', '날짜검증', '공지여부', '미사용예외', '자동연장'], axis=1, inplace=True)
+    
+    filename = remove_extension(selected_file)
+    output_excel_path = f'{filename}_정리.xlsx'
+    notice_excel_path = f'{filename}_공지.xlsx'
+    delete_excel_path = f'{filename}_삭제.xlsx'
+
+    df.to_excel(output_excel_path, index=False, engine='openpyxl')
+    notice_df.to_excel(notice_excel_path, index=False, engine='openpyxl')
+    delete_df.to_excel(delete_excel_path, index=False, engine='openpyxl')
+
