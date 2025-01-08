@@ -1,6 +1,13 @@
 import ipaddress
 import re
 
+# 정책 추출
+
+# 객체 추출
+
+# 객체 확장 부분
+
+# 분석부분
 def ip_to_range(ip):
     if ip == 'any':
         return 0, 2**32 - 1
