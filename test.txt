@@ -1,2 +1,0 @@
-임시로 만든 파일입니다.
-commit test file
