@@ -1,5 +1,5 @@
 import requests
-import pasdas as pd
+import pandas as pd
 import json
 requests.packages.urllib3.disable_warnings()
 
