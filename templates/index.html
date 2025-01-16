@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방화벽 관리 시스템</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-color: #1f2937;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 900px;
+            padding: 2rem;
+        }
+
+        .card {
+            background: var(--card-background);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .form-control {
+            border-radius: 0.5rem;
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        .form-control:disabled {
+            background-color: #f3f4f6;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-1px);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+        }
+
+        .alert {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group-text {
+            background-color: transparent;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+        }
+
+        .progress-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 1rem;
+        }
+
+        .progress-step.active {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background-color: #e5e7eb;
+            z-index: -1;
+        }
+
+        .progress-step:last-child::after {
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            margin-left: 0.5rem;
+        }
+
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">방화벽 관리 시스템</h1>
+            </div>
+            
+            <div class="progress-indicator">
+                <div class="progress-step active">
+                    <i class="fas fa-user-lock"></i>
+                    <div>접속 정보</div>
+                </div>
+                <div class="progress-step">
+                    <i class="fas fa-shield-alt"></i>
+                    <div>방화벽 선택</div>
+                </div>
+                <div class="progress-step">
+                    <i class="fas fa-terminal"></i>
+                    <div>명령어 선택</div>
+                </div>
+            </div>
+
+            <form id="commandForm">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" for="hostname">
+                                <i class="fas fa-server"></i> Hostname
+                            </label>
+                            <input type="text" class="form-control" id="hostname" required placeholder="예: 192.168.1.1">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" for="username">
+                                <i class="fas fa-user"></i> Username
+                            </label>
+                            <input type="text" class="form-control" id="username" required placeholder="사용자 이름">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" for="password">
+                                <i class="fas fa-key"></i> Password
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="password" required>
+                                <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" for="firewallType">
+                                <i class="fas fa-shield-alt"></i> 방화벽 종류
+                            </label>
+                            <select class="form-control" id="firewallType" required>
+                                <option value="">선택하세요</option>
+                                {% for fw_type in commands.keys() %}
+                                <option value="{{ fw_type }}">{{ fw_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" for="command">
+                                <i class="fas fa-code"></i> 명령어
+                            </label>
+                            <select class="form-control" id="command" disabled>
+                                <option value="">먼저 방화벽을 선택하세요</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label class="form-label" for="subcommand">
+                                <i class="fas fa-terminal"></i> 하위 명령어
+                            </label>
+                            <select class="form-control" id="subcommand" disabled>
+                                <option value="">먼저 명령어를 선택하세요</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="optionsContainer" class="form-group" style="display: none;">
+                    <h3 class="section-title"><i class="fas fa-cog"></i> 옵션</h3>
+                    <div id="optionsFields" class="row"></div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-play"></i> 실행
+                        <span class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="result" class="mt-4"></div>
+    </div>
+
+    <script>
+        // Jinja2 템플릿에서 전달된 commands 객체를 전역 변수로 설정
+        window.commands = JSON.parse('{{ commands|tojson|safe }}');
+
+        // 비밀번호 표시/숨기기 토글
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+
+        // 진행 상태 표시 업데이트 함수
+        function updateProgressSteps(step) {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach((s, index) => {
+                if (index < step) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        }
+
+        document.getElementById('firewallType').addEventListener('change', function() {
+            const commandSelect = document.getElementById('command');
+            const selectedFw = this.value;
+            
+            commandSelect.innerHTML = '<option value="">선택하세요</option>';
+            if (selectedFw) {
+                Object.keys(window.commands[selectedFw]).forEach(cmd => {
+                    commandSelect.add(new Option(cmd, cmd));
+                });
+                commandSelect.disabled = false;
+                updateProgressSteps(2);
+            } else {
+                commandSelect.disabled = true;
+                updateProgressSteps(1);
+            }
+            document.getElementById('subcommand').disabled = true;
+            document.getElementById('optionsContainer').style.display = 'none';
+        });
+
+        document.getElementById('command').addEventListener('change', function() {
+            const subcommandSelect = document.getElementById('subcommand');
+            const firewallType = document.getElementById('firewallType').value;
+            const selectedCmd = this.value;
+            
+            subcommandSelect.innerHTML = '<option value="">선택하세요</option>';
+            if (selectedCmd) {
+                Object.keys(window.commands[firewallType][selectedCmd]).forEach(subcmd => {
+                    subcommandSelect.add(new Option(subcmd, subcmd));
+                });
+                subcommandSelect.disabled = false;
+                updateProgressSteps(3);
+            } else {
+                subcommandSelect.disabled = true;
+                updateProgressSteps(2);
+            }
+            document.getElementById('optionsContainer').style.display = 'none';
+        });
+
+        document.getElementById('subcommand').addEventListener('change', function() {
+            const firewallType = document.getElementById('firewallType').value;
+            const command = document.getElementById('command').value;
+            const subcommand = this.value;
+            const optionsContainer = document.getElementById('optionsContainer');
+            const optionsFields = document.getElementById('optionsFields');
+            
+            optionsFields.innerHTML = '';
+            const options = window.commands[firewallType][command][subcommand]?.options;
+            
+            if (options) {
+                optionsContainer.style.display = 'block';
+                Object.entries(options).forEach(([key, value]) => {
+                    const div = document.createElement('div');
+                    div.className = 'col-md-6 mb-3';
+                    
+                    if (Array.isArray(value)) {
+                        div.innerHTML = `
+                            <label class="form-label" for="option_${key}">
+                                <i class="fas fa-cog"></i> ${key}
+                            </label>
+                            <select class="form-control" id="option_${key}" name="option_${key}">
+                                ${value.map(v => `<option value="${v}">${v}</option>`).join('')}
+                            </select>
+                        `;
+                    } else {
+                        div.innerHTML = `
+                            <label class="form-label" for="option_${key}">
+                                <i class="fas fa-cog"></i> ${key}
+                            </label>
+                            <input type="text" class="form-control" id="option_${key}" name="option_${key}" value="${value}">
+                        `;
+                    }
+                    optionsFields.appendChild(div);
+                });
+            } else {
+                optionsContainer.style.display = 'none';
+            }
+        });
+
+        document.getElementById('commandForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 로딩 스피너 표시
+            const submitButton = this.querySelector('button[type="submit"]');
+            const loadingSpinner = submitButton.querySelector('.loading-spinner');
+            submitButton.disabled = true;
+            loadingSpinner.style.display = 'inline-block';
+            
+            const options = {};
+            const optionsFields = document.getElementById('optionsFields').querySelectorAll('input, select');
+            optionsFields.forEach(field => {
+                options[field.name.replace('option_', '')] = field.value;
+            });
+
+            const data = {
+                hostname: document.getElementById('hostname').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                firewall_type: document.getElementById('firewallType').value,
+                command: document.getElementById('command').value,
+                subcommand: document.getElementById('subcommand').value,
+                options: options
+            };
+
+            try {
+                const response = await fetch('/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = `
+                    <div class="alert alert-${result.status === 'success' ? 'success' : 'danger'}">
+                        <i class="fas fa-${result.status === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                        ${result.message}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        오류가 발생했습니다: ${error.message}
+                    </div>
+                `;
+            } finally {
+                // 로딩 스피너 숨기기
+                submitButton.disabled = false;
+                loadingSpinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 

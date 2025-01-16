@@ -1,0 +1,63 @@
+{
+    "paloalto": {
+      "show": {
+        "info": null,
+        "thresholds": null
+      },
+      "export": {
+        "config": {
+          "options": {
+            "type": ["running", "candidate"]
+          }
+        },
+        "rules": {
+          "options": {
+            "type": ["running", "candidate"]
+          }
+        },
+        "objects": {
+          "options": {
+            "type": ["running", "candidate"],
+            "option": ["all", "network", "network-group", "service", "service-group"]
+          }
+        },
+        "hitcount": {
+          "options": {
+            "vsys": "vsys1"
+          }
+        }
+      },
+      "analyze": {
+        "redundant": {
+          "options": {
+            "type": ["running", "candidate"]
+          }
+        },
+        "validation": {
+          "options": {
+            "type": ["running", "candidate"]
+          }
+        }
+      }
+    },
+    "mf2": {
+      "show": {
+        "info": null
+      },
+      "export": {
+        "rules": null,
+        "object": null
+      },
+      "analyze": {
+        "redundant": null
+      }
+    },
+    "ngf": {
+      "export": {
+        "rules": null
+      },
+      "analyze": {
+        "redundant": null
+      }
+    }
+  }
