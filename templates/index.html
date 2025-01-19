@@ -24,17 +24,17 @@
                 <div class="auth-section">
                     <div class="form-group">
                         <label class="form-label" for="hostname">Hostname</label>
-                        <input type="text" class="form-control" id="hostname" required placeholder="e.g. 192.168.1.1">
+                        <input type="text" class="form-control" id="hostname" required placeholder="e.g. 192.168.1.1" autocomplete="off">
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label" for="username">Username</label>
-                        <input type="text" class="form-control" id="username" required placeholder="Enter username">
+                        <input type="text" class="form-control" id="username" required placeholder="Enter username" autocomplete="off">
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label" for="password">Password</label>
-                        <input type="password" class="form-control" id="password" required>
+                        <input type="password" class="form-control" id="password" required autocomplete="off">
                     </div>
                 </div>
 
@@ -80,6 +80,185 @@
 
     <script>
         const commands = {{ commands|tojson|safe }};
+        
+        // 테스트용 사전 정의된 인증 정보
+        const predefinedHosts = {
+            "192.168.1.1": {
+                alias: "관문 스위치",
+                username: "admin",
+                password: "admin123"
+            },
+            "10.0.0.1": {
+                alias: "백본 라우터",
+                username: "root",
+                password: "root123"
+            },
+            "172.16.0.1": {
+                alias: "분배 스위치",
+                username: "user",
+                password: "user123"
+            }
+        };
+
+        // 문자열 정규화 함수
+        function normalizeString(str) {
+            return str.normalize('NFC').toLowerCase().trim();
+        }
+
+        // 검색어와 대상 문자열 비교 함수
+        function matchesSearch(target, search) {
+            const normalizedTarget = normalizeString(target);
+            const normalizedSearch = normalizeString(search);
+            return normalizedTarget.includes(normalizedSearch);
+        }
+
+        // 호스트네임 자동완성 설정
+        const hostnameInput = document.getElementById('hostname');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        
+        let hostSuggestions = document.createElement('div');
+        hostSuggestions.className = 'suggestions-container';
+        hostnameInput.parentNode.appendChild(hostSuggestions);
+
+        let currentFocus = -1;
+
+        hostnameInput.addEventListener('keydown', function(e) {
+            const items = hostSuggestions.getElementsByClassName('suggestion-item');
+            
+            if (items.length === 0) return;
+
+            // 위 화살표
+            if (e.keyCode === 38) {
+                e.preventDefault();
+                currentFocus--;
+                if (currentFocus < 0) currentFocus = items.length - 1;
+                setActiveSuggestion(items);
+            }
+            // 아래 화살표
+            else if (e.keyCode === 40) {
+                e.preventDefault();
+                currentFocus++;
+                if (currentFocus >= items.length) currentFocus = 0;
+                setActiveSuggestion(items);
+            }
+            // 엔터
+            else if (e.keyCode === 13) {
+                e.preventDefault();
+                let selectedItem;
+                
+                if (currentFocus > -1) {
+                    selectedItem = items[currentFocus];
+                } else if (items.length > 0) {
+                    selectedItem = items[0];  // 첫 번째 항목 선택
+                }
+
+                if (selectedItem) {
+                    const selectedHost = selectedItem.dataset.value;
+                    hostnameInput.value = selectedHost;
+                    
+                    if (predefinedHosts[selectedHost]) {
+                        usernameInput.value = predefinedHosts[selectedHost].username;
+                        passwordInput.value = predefinedHosts[selectedHost].password;
+                    }
+                    
+                    hostSuggestions.style.display = 'none';
+                    currentFocus = -1;
+                }
+            }
+        });
+
+        function setActiveSuggestion(items) {
+            removeActive(items);
+            if (currentFocus >= 0) {
+                items[currentFocus].classList.add('active');
+                // 선택된 항목이 보이도록 스크롤
+                items[currentFocus].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function removeActive(items) {
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove('active');
+            }
+        }
+
+        hostnameInput.addEventListener('input', function() {
+            currentFocus = -1;  // 입력 시 선택 초기화
+            const value = this.value;
+            const matches = Object.entries(predefinedHosts).filter(([host, info]) => 
+                matchesSearch(host, value) || 
+                matchesSearch(info.alias, value)
+            );
+
+            if (matches.length > 0 && value) {
+                hostSuggestions.innerHTML = matches
+                    .map(([host, info]) => `
+                        <div class="suggestion-item" data-value="${host}">
+                            <div class="suggestion-host">${host}</div>
+                            <div class="suggestion-alias">${info.alias}</div>
+                        </div>
+                    `)
+                    .join('');
+                hostSuggestions.style.display = 'block';
+            } else {
+                hostSuggestions.style.display = 'none';
+            }
+        });
+
+        hostnameInput.addEventListener('focus', function() {
+            if (this.value) {
+                const value = this.value;
+                const matches = Object.entries(predefinedHosts).filter(([host, info]) => 
+                    matchesSearch(host, value) || 
+                    matchesSearch(info.alias, value)
+                );
+                if (matches.length > 0) {
+                    hostSuggestions.innerHTML = matches
+                        .map(([host, info]) => `
+                            <div class="suggestion-item" data-value="${host}">
+                                <div class="suggestion-host">${host}</div>
+                                <div class="suggestion-alias">${info.alias}</div>
+                            </div>
+                        `)
+                        .join('');
+                    hostSuggestions.style.display = 'block';
+                }
+            } else {
+                // 입력값이 없을 때는 모든 호스트 표시
+                hostSuggestions.innerHTML = Object.entries(predefinedHosts)
+                    .map(([host, info]) => `
+                        <div class="suggestion-item" data-value="${host}">
+                            <div class="suggestion-host">${host}</div>
+                            <div class="suggestion-alias">${info.alias}</div>
+                        </div>
+                    `)
+                    .join('');
+                hostSuggestions.style.display = 'block';
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!hostnameInput.contains(e.target) && !hostSuggestions.contains(e.target)) {
+                hostSuggestions.style.display = 'none';
+                currentFocus = -1;  // 포커스 초기화
+            }
+        });
+
+        hostSuggestions.addEventListener('click', function(e) {
+            if (e.target.classList.contains('suggestion-item')) {
+                const selectedHost = e.target.dataset.value;
+                hostnameInput.value = selectedHost;
+                
+                // 선택된 호스트의 인증 정보 자동 입력
+                if (predefinedHosts[selectedHost]) {
+                    usernameInput.value = predefinedHosts[selectedHost].username;
+                    passwordInput.value = predefinedHosts[selectedHost].password;
+                }
+                
+                hostSuggestions.style.display = 'none';
+            }
+        });
 
         document.getElementById('firewallType').addEventListener('change', function() {
             const commandSelect = document.getElementById('command');
