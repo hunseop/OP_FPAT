@@ -93,8 +93,16 @@ function handleHostnameKeydown(e) {
 
         case 'Enter':
             e.preventDefault();
-            if (state.currentFocus > -1) {
-                suggestions[state.currentFocus].click();
+            if (state.currentFocus > -1 && suggestions[state.currentFocus]) {
+                const selectedItem = suggestions[state.currentFocus];
+                const hostname = selectedItem.dataset.hostname;
+                const host = state.predefinedHosts[hostname];
+                
+                elements.hostnameInput.value = hostname;
+                elements.usernameInput.value = host.username || '';
+                elements.passwordInput.value = host.password || '';
+                
+                hideSuggestions();
             }
             break;
 
@@ -107,6 +115,14 @@ function handleHostnameKeydown(e) {
 // 호스트네임 입력 핸들러
 function handleHostnameInput(e) {
     const value = e.target.value.toLowerCase();
+    
+    // 입력값이 변경될 때마다 기존 값과 연결 해제
+    const currentHost = state.predefinedHosts[value];
+    if (!currentHost) {
+        elements.usernameInput.value = '';
+        elements.passwordInput.value = '';
+    }
+    
     const matches = Object.entries(state.predefinedHosts).filter(([hostname, info]) => 
         hostname.toLowerCase().includes(value) || 
         info.alias.toLowerCase().includes(value)
@@ -157,9 +173,10 @@ function showSuggestions(matches) {
             const hostname = item.dataset.hostname;
             const host = state.predefinedHosts[hostname];
             
+            // 호스트네임 선택 시 항상 모든 필드 업데이트
             elements.hostnameInput.value = hostname;
-            elements.usernameInput.value = host.username;
-            elements.passwordInput.value = host.password;
+            elements.usernameInput.value = host.username || '';
+            elements.passwordInput.value = host.password || '';
             
             hideSuggestions();
         });
