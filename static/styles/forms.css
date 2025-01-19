@@ -20,8 +20,30 @@
     letter-spacing: 0.5px;
 }
 
+.hostname-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.settings-icon {
+    position: absolute;
+    right: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--secondary-color);
+    cursor: pointer;
+    transition: color 0.2s ease;
+    padding: 5px;
+}
+
+.settings-icon:hover {
+    color: var(--text-color);
+}
+
 .form-control {
-    width: 155px;
+    width: 100%;
     padding: 0.375rem 0.5rem;
     background: var(--input-background);
     border: 1px solid var(--border-color);
@@ -128,7 +150,7 @@
 }
 
 select.form-control {
-    width: 155px;
+    width: 100%;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M3 6h10l-5 5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -148,35 +170,50 @@ select.form-control option {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    width: 100%;
 }
 
 .command-section {
     display: flex;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.auth-section .form-group,
+.command-section .form-group {
+    flex: 1;
 }
 
 .options-grid {
     display: grid;
-    grid-template-columns: repeat(3, 155px);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+    margin-bottom: 1rem;
+    width: 100%;
 }
 
 #optionsContainer {
+    position: relative;
     opacity: 0;
+    visibility: hidden;
     max-height: 0;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
-    transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out;
+    transition: all 0.3s ease-in-out;
 }
 
 #optionsContainer.visible {
     opacity: 1;
+    visibility: visible;
     max-height: 500px;
+    margin-bottom: 1.5rem;
 }
 
 .form-actions {
     text-align: right;
-    margin-top: 2rem;
+    margin-top: 1rem;
 }
 
 .result {
@@ -284,24 +321,32 @@ select.form-control option {
         padding: 1rem;
     }
 
+    .hostname-container {
+        width: 100%;
+    }
+
+    .settings-icon {
+        right: 10px;
+    }
+
     .auth-section,
     .command-section {
         flex-direction: column;
         gap: 0.75rem;
     }
+
+    .auth-section .form-group,
+    .command-section .form-group {
+        max-width: 100%;
+    }
     
-    .form-control,
-    select.form-control {
+    .form-control {
         width: 100%;
     }
 
     .options-grid {
         grid-template-columns: 1fr;
         gap: 0.75rem;
-    }
-
-    .options-grid .form-control {
-        width: 100%;
     }
 }
 
@@ -363,4 +408,9 @@ select.form-control option {
 
 .suggestion-item.active {
     background: rgba(255, 255, 255, 0.1);
+}
+
+#commandForm {
+    width: 100%;
+    position: relative;
 } 

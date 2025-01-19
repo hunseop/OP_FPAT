@@ -324,4 +324,31 @@
 
 .notification.error i {
     color: #f44336;
+}
+
+#optionsContainer {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.options-grid .form-group {
+    margin-bottom: 0;
+}
+
+.options-grid .form-control.error {
+    border-color: #f44336;
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+.options-grid .form-control.error:focus {
+    box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
 } 

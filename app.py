@@ -45,8 +45,20 @@ def manage_hosts():
     elif request.method == 'PUT':
         hosts = load_hosts()
         updated_host = request.json
+        
+        # hostname 키 존재 여부 확인
+        if 'hostname' not in updated_host:
+            return jsonify({'error': 'hostname이 필요합니다.'}), 400
+            
         if updated_host['hostname'] not in hosts:
             return jsonify({'error': '존재하지 않는 호스트입니다.'}), 404
+            
+        # 필수 필드 검증
+        required_fields = ['alias', 'username', 'password']
+        missing_fields = [field for field in required_fields if field not in updated_host]
+        if missing_fields:
+            return jsonify({'error': f'다음 필드가 필요합니다: {", ".join(missing_fields)}'}), 400
+            
         hosts[updated_host['hostname']] = {
             'alias': updated_host['alias'],
             'username': updated_host['username'],
@@ -57,9 +69,15 @@ def manage_hosts():
     
     elif request.method == 'DELETE':
         hosts = load_hosts()
+        
+        # hostname 키 존재 여부 확인
+        if not request.json or 'hostname' not in request.json:
+            return jsonify({'error': 'hostname이 필요합니다.'}), 400
+            
         hostname = request.json['hostname']
         if hostname not in hosts:
             return jsonify({'error': '존재하지 않는 호스트입니다.'}), 404
+            
         del hosts[hostname]
         save_hosts(hosts)
         return jsonify({'message': '호스트가 삭제되었습니다.'})
