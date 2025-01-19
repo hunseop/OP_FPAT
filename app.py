@@ -9,9 +9,13 @@ app.config['SECRET_KEY'] = 'your-secret-key'
 with open('commands.json', 'r') as f:
     COMMANDS = json.load(f)
 
+# 호스트 정보 로드
+with open('hosts.json', 'r') as f:
+    HOSTS = json.load(f)
+
 @app.route('/')
 def index():
-    return render_template('index.html', commands=COMMANDS)
+    return render_template('index.html', commands=COMMANDS, hosts=HOSTS)
 
 @app.route('/execute', methods=['POST'])
 def execute():

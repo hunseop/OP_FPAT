@@ -80,26 +80,8 @@
 
     <script>
         const commands = {{ commands|tojson|safe }};
+        const predefinedHosts = {{ hosts|tojson|safe }};
         
-        // 테스트용 사전 정의된 인증 정보
-        const predefinedHosts = {
-            "192.168.1.1": {
-                alias: "관문 스위치",
-                username: "admin",
-                password: "admin123"
-            },
-            "10.0.0.1": {
-                alias: "백본 라우터",
-                username: "root",
-                password: "root123"
-            },
-            "172.16.0.1": {
-                alias: "분배 스위치",
-                username: "user",
-                password: "user123"
-            }
-        };
-
         // 문자열 정규화 함수
         function normalizeString(str) {
             return str.normalize('NFC').toLowerCase().trim();
