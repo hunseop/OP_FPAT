@@ -1,6 +1,9 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import json
 import time
+import os
+import pandas as pd
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -17,6 +20,11 @@ def load_hosts():
 def save_hosts(hosts):
     with open('hosts.json', 'w', encoding='utf-8') as f:
         json.dump(hosts, f, ensure_ascii=False, indent=4)
+
+# 임시 파일 저장 디렉토리
+TEMP_DIR = 'temp'
+if not os.path.exists(TEMP_DIR):
+    os.makedirs(TEMP_DIR)
 
 @app.route('/')
 def index():
@@ -167,18 +175,60 @@ def execute():
     print(data)
     time.sleep(5)
     
-    # 분석 결과 파일명 생성 (예시)
-    filename = f"analysis_{firewall_type}_{command}_{subcommand}_{time.strftime('%Y%m%d_%H%M%S')}.xlsx"
-    
-    response = {
-        'status': 'success',
-        'message': f'Analysis complete. Results saved to {filename}',
-        'details': {
-            'filename': filename
+    try:
+        # 임시 데이터프레임 생성 (예시)
+        df = pd.DataFrame({
+            'Command': [f"{firewall_type} {command} {subcommand}"],
+            'Hostname': [hostname],
+            'Timestamp': [datetime.now()]
+        })
+        
+        # 파일명 생성
+        filename = f"{time.strftime('%Y%m%d')}_{hostname}_{subcommand}.xlsx"
+        filepath = os.path.join(TEMP_DIR, filename)
+        
+        # 엑셀 파일로 저장
+        df.to_excel(filepath, index=False)
+        
+        response = {
+            'status': 'success',
+            'message': f'Analysis complete. Click download button to save the results.',
+            'details': {
+                'filename': filename
+            }
         }
-    }
-    
-    return jsonify(response)
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Error during analysis: {str(e)}'
+        }), 500
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    try:
+        filepath = os.path.join(TEMP_DIR, filename)
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Error downloading file: {str(e)}'
+        }), 404
+
+# 주기적으로 오래된 임시 파일 정리 (선택사항)
+def cleanup_temp_files():
+    # 24시간 이상 된 파일 삭제
+    current_time = time.time()
+    for filename in os.listdir(TEMP_DIR):
+        filepath = os.path.join(TEMP_DIR, filename)
+        if os.path.getmtime(filepath) < current_time - 86400:  # 24시간
+            os.remove(filepath)
 
 if __name__ == '__main__':
     app.run(debug=True) 

@@ -496,11 +496,24 @@ function showLoadingState() {
 }
 
 function showResult(result) {
-    elements.result.innerHTML = `
-        <div class="result ${result.status === 'success' ? 'success' : 'error'}">
-            ${result.message}
-        </div>
-    `;
+    if (result.status === 'success' && result.details?.filename) {
+        // 파일 다운로드 링크 생성
+        const downloadUrl = `/download/${result.details.filename}`;
+        elements.result.innerHTML = `
+            <div class="result success">
+                ${result.message}
+                <a href="${downloadUrl}" download class="download-link">
+                    <i class="fas fa-download"></i> Download Result
+                </a>
+            </div>
+        `;
+    } else {
+        elements.result.innerHTML = `
+            <div class="result ${result.status === 'success' ? 'success' : 'error'}">
+                ${result.message}
+            </div>
+        `;
+    }
 }
 
 function showError(error) {
