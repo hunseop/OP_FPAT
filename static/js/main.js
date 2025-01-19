@@ -102,6 +102,12 @@ function handleHostnameKeydown(e) {
                 elements.usernameInput.value = host.username || '';
                 elements.passwordInput.value = host.password || '';
                 
+                // 방화벽 타입 선택 및 관련 필드 업데이트
+                if (host.firewall_type) {
+                    elements.firewallTypeSelect.value = host.firewall_type;
+                    handleFirewallTypeChange({ target: elements.firewallTypeSelect });
+                }
+                
                 hideSuggestions();
             }
             break;
@@ -173,10 +179,16 @@ function showSuggestions(matches) {
             const hostname = item.dataset.hostname;
             const host = state.predefinedHosts[hostname];
             
-            // 호스트네임 선택 시 항상 모든 필드 업데이트
+            // 호스트네임 선택 시 모든 필드 업데이트
             elements.hostnameInput.value = hostname;
             elements.usernameInput.value = host.username || '';
             elements.passwordInput.value = host.password || '';
+            
+            // 방화벽 타입 선택 및 관련 필드 업데이트
+            if (host.firewall_type) {
+                elements.firewallTypeSelect.value = host.firewall_type;
+                handleFirewallTypeChange({ target: elements.firewallTypeSelect });
+            }
             
             hideSuggestions();
         });
