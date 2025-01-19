@@ -24,6 +24,7 @@ def execute():
     subcommand = data.get('subcommand')
     options = data.get('options', {})
     
+    print(data)
     time.sleep(10)
     # 여기에 실제 명령어 실행 로직 구현
     # 현재는 테스트용 응답만 반환
