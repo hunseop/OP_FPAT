@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>FPAT - Firewall Policy Analysis Tool</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/forms.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles/animations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/modal.css') }}">
 </head>
 <body>
     <div class="container">
@@ -24,7 +29,10 @@
                 <div class="auth-section">
                     <div class="form-group">
                         <label class="form-label" for="hostname">Hostname</label>
-                        <input type="text" class="form-control" id="hostname" required placeholder="e.g. 192.168.1.1" autocomplete="off">
+                        <div class="hostname-container">
+                            <input type="text" class="form-control" id="hostname" required placeholder="e.g. 192.168.1.1" autocomplete="off">
+                            <i class="fas fa-cog settings-icon" id="hostsSettings"></i>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -78,9 +86,126 @@
         </div>
     </div>
 
+    <!-- 호스트 관리 모달 -->
+    <div id="hostsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Host Management</h2>
+                <button class="close">&times;</button>
+            </div>
+            
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="hostSearch" placeholder="Search by hostname or alias...">
+            </div>
+
+            <table class="hosts-table">
+                <thead>
+                    <tr>
+                        <th>Hostname</th>
+                        <th>별칭</th>
+                        <th>Username</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="hostsTableBody">
+                </tbody>
+            </table>
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <i class="fas fa-inbox"></i>
+                <p>No hosts found</p>
+            </div>
+            <button class="add-button" id="addHostButton">
+                <i class="fas fa-plus"></i>
+                Add Host
+            </button>
+        </div>
+    </div>
+
+    <!-- 호스트 수정 모달 -->
+    <div id="editHostModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Edit Host</h2>
+                <button class="close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label class="form-label" for="editHostname">Hostname</label>
+                    <input type="text" class="form-control" id="editHostname">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editAlias">별칭</label>
+                    <input type="text" class="form-control" id="editAlias">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editUsername">Username</label>
+                    <input type="text" class="form-control" id="editUsername">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editPassword">Password</label>
+                    <input type="password" class="form-control" id="editPassword">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+                    <button class="btn" onclick="saveHostEdit()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 호스트 삭제 확인 모달 -->
+    <div id="deleteHostModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Delete Host</h2>
+                <button class="close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <p>Are you sure you want to delete this host?</p>
+                <div class="form-actions">
+                    <button class="btn btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+                    <button class="btn btn-danger" onclick="confirmDeleteHost()">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Host 모달 -->
+    <div id="addHostModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Add Host</h2>
+                <button class="close" onclick="closeAddModal()">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label class="form-label" for="addHostname">Hostname</label>
+                    <input type="text" class="form-control" id="addHostname">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addAlias">별칭</label>
+                    <input type="text" class="form-control" id="addAlias">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addUsername">Username</label>
+                    <input type="text" class="form-control" id="addUsername">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="addPassword">Password</label>
+                    <input type="password" class="form-control" id="addPassword">
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-cancel" onclick="closeAddModal()">Cancel</button>
+                    <button class="btn" onclick="saveNewHost()">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const commands = {{ commands|tojson|safe }};
-        const predefinedHosts = {{ hosts|tojson|safe }};
+        let commands = {{ commands|tojson|safe }};
+        let predefinedHosts = {{ hosts|tojson|safe }};
         
         // 문자열 정규화 함수
         function normalizeString(str) {
@@ -406,6 +531,344 @@
                     }
                 });
                 submitButton.disabled = false;
+            }
+        });
+
+        // 호스트 관리 모달 관련 코드
+        const modal = document.getElementById('hostsModal');
+        const settingsIcon = document.getElementById('hostsSettings');
+        const closeBtn = document.getElementsByClassName('close')[0];
+        const addHostButton = document.getElementById('addHostButton');
+        const hostsTableBody = document.getElementById('hostsTableBody');
+
+        // predefinedHosts 업데이트 함수
+        function updatePredefinedHosts() {
+            fetch('/api/hosts')
+                .then(response => response.json())
+                .then(hosts => {
+                    predefinedHosts = hosts;
+                });
+        }
+
+        function refreshHostsTable() {
+            fetch('/api/hosts')
+                .then(response => response.json())
+                .then(hosts => {
+                    predefinedHosts = hosts;  // 자동완성 데이터 업데이트
+                    hostsTableBody.innerHTML = '';
+                    const entries = Object.entries(hosts);
+                    
+                    if (entries.length === 0) {
+                        document.getElementById('emptyState').style.display = 'block';
+                        document.querySelector('.hosts-table').style.display = 'none';
+                    } else {
+                        document.getElementById('emptyState').style.display = 'none';
+                        document.querySelector('.hosts-table').style.display = 'table';
+                        
+                        entries.forEach(([hostname, info]) => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${hostname}</td>
+                                <td>${info.alias}</td>
+                                <td>${info.username}</td>
+                                <td class="action-buttons">
+                                    <button class="action-button edit-button" onclick="editHost('${hostname}')">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="action-button delete-button" onclick="deleteHost('${hostname}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </td>
+                            `;
+                            hostsTableBody.appendChild(row);
+                        });
+                    }
+                });
+        }
+
+        let currentEditingHost = null;
+        let currentDeletingHost = null;
+
+        const editModal = document.getElementById('editHostModal');
+        const deleteModal = document.getElementById('deleteHostModal');
+
+        function editHost(hostname) {
+            currentEditingHost = hostname;
+            fetch('/api/hosts')
+                .then(response => response.json())
+                .then(hosts => {
+                    const host = hosts[hostname];
+                    if (!host) {
+                        alert('Host not found');
+                        return;
+                    }
+
+                    document.getElementById('editHostname').value = hostname;
+                    document.getElementById('editAlias').value = host.alias;
+                    document.getElementById('editUsername').value = host.username;
+                    document.getElementById('editPassword').value = host.password;
+
+                    editModal.style.display = 'block';
+                });
+        }
+
+        function closeEditModal() {
+            editModal.style.display = 'none';
+            currentEditingHost = null;
+        }
+
+        function saveHostEdit() {
+            const newHostname = document.getElementById('editHostname').value;
+            const newAlias = document.getElementById('editAlias').value;
+            const newUsername = document.getElementById('editUsername').value;
+            const newPassword = document.getElementById('editPassword').value;
+
+            const errors = validateHostInput(newHostname, newAlias, newUsername, newPassword);
+            if (errors.length > 0) {
+                showNotification(errors.join('\n'), 'error');
+                return;
+            }
+
+            const isHostnameChanged = newHostname !== currentEditingHost;
+
+            if (isHostnameChanged) {
+                fetch('/api/hosts', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ hostname: currentEditingHost })
+                })
+                .then(response => response.json())
+                .then(() => {
+                    return fetch('/api/hosts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            hostname: newHostname,
+                            alias: newAlias,
+                            username: newUsername,
+                            password: newPassword
+                        })
+                    });
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (!result.error) {
+                        refreshHostsTable();
+                        updatePredefinedHosts();
+                        closeEditModal();
+                        showNotification('Host updated successfully');
+                    } else {
+                        showNotification(result.error, 'error');
+                    }
+                });
+            } else {
+                fetch('/api/hosts', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        hostname: newHostname,
+                        alias: newAlias,
+                        username: newUsername,
+                        password: newPassword
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (!result.error) {
+                        refreshHostsTable();
+                        updatePredefinedHosts();
+                        closeEditModal();
+                        showNotification('Host updated successfully');
+                    } else {
+                        showNotification(result.error, 'error');
+                    }
+                });
+            }
+        }
+
+        function deleteHost(hostname) {
+            currentDeletingHost = hostname;
+            deleteModal.style.display = 'block';
+        }
+
+        function closeDeleteModal() {
+            deleteModal.style.display = 'none';
+            currentDeletingHost = null;
+        }
+
+        function confirmDeleteHost() {
+            fetch('/api/hosts', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ hostname: currentDeletingHost })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.error) {
+                    refreshHostsTable();
+                    updatePredefinedHosts();
+                    closeDeleteModal();
+                    showNotification('Host deleted successfully');
+                } else {
+                    showNotification(result.error, 'error');
+                }
+            });
+        }
+
+        settingsIcon.onclick = function() {
+            modal.style.display = 'block';
+            refreshHostsTable();
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        addHostButton.onclick = addHost;
+
+        // 호스트 검색 기능
+        document.getElementById('hostSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = hostsTableBody.getElementsByTagName('tr');
+            
+            Array.from(rows).forEach(row => {
+                const hostname = row.cells[0].textContent.toLowerCase();
+                const alias = row.cells[1].textContent.toLowerCase();
+                const matches = hostname.includes(searchTerm) || alias.includes(searchTerm);
+                row.style.display = matches ? '' : 'none';
+            });
+        });
+
+        const addModal = document.getElementById('addHostModal');
+
+        function addHost() {
+            addModal.style.display = 'block';
+            // 입력 필드 초기화
+            document.getElementById('addHostname').value = '';
+            document.getElementById('addAlias').value = '';
+            document.getElementById('addUsername').value = '';
+            document.getElementById('addPassword').value = '';
+        }
+
+        function closeAddModal() {
+            addModal.style.display = 'none';
+        }
+
+        function saveNewHost() {
+            const hostname = document.getElementById('addHostname').value;
+            const alias = document.getElementById('addAlias').value;
+            const username = document.getElementById('addUsername').value;
+            const password = document.getElementById('addPassword').value;
+
+            const errors = validateHostInput(hostname, alias, username, password);
+            if (errors.length > 0) {
+                showNotification(errors.join('\n'), 'error');
+                return;
+            }
+
+            fetch('/api/hosts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    hostname,
+                    alias,
+                    username,
+                    password
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.error) {
+                    refreshHostsTable();
+                    updatePredefinedHosts();
+                    closeAddModal();
+                    showNotification('Host added successfully');
+                } else {
+                    showNotification(result.error, 'error');
+                }
+            });
+        }
+
+        // 알림 표시 함수
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                ${message}
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // 입력값 검증 함수
+        function validateHostInput(hostname, alias, username, password) {
+            const errors = [];
+            
+            if (!hostname) errors.push('Hostname is required');
+            else if (!/^[a-zA-Z0-9.-]+$/.test(hostname)) {
+                errors.push('Hostname can only contain letters, numbers, dots, and hyphens');
+            }
+            
+            if (!alias) errors.push('Alias is required');
+            if (!username) errors.push('Username is required');
+            if (!password) errors.push('Password is required');
+            
+            return errors;
+        }
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (addModal.style.display === 'block') {
+                    closeAddModal();
+                } else if (editModal.style.display === 'block') {
+                    closeEditModal();
+                } else if (deleteModal.style.display === 'block') {
+                    closeDeleteModal();
+                } else {
+                    modal.style.display = 'none';
+                }
+            }
+        });
+
+        // Add Host 모달 Enter 키 처리
+        document.getElementById('addHostModal').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                saveNewHost();
+            }
+        });
+
+        // Edit Host 모달 Enter 키 처리
+        document.getElementById('editHostModal').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                saveHostEdit();
             }
         });
     </script>
