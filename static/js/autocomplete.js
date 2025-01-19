@@ -126,7 +126,7 @@ class Autocomplete {
     }
     
     selectSuggestion(element) {
-        const value = element.dataset.value;
+        const value = element.dataset.hostname || element.dataset.value;
         this.input.value = value;
         this.options.onSelect(value);
         this.hideSuggestions();

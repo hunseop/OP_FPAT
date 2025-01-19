@@ -1,25 +1,73 @@
+/* Variables */
+:root {
+    --input-height: 2rem;
+    --input-width: 155px;
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.8125rem;
+    --font-size-md: 0.875rem;
+    
+    --border-radius-sm: 6px;
+    --border-radius-md: 8px;
+    
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease-in-out;
+    
+    --blur-normal: blur(8px);
+    --blur-heavy: blur(30px);
+    
+    --shadow-normal: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Base Layout */
 .container {
     width: 100%;
     max-width: 600px;
-    padding: 1.5rem;
+    padding: var(--spacing-lg);
     position: relative;
     z-index: 1;
 }
 
+#commandForm {
+    width: 100%;
+    position: relative;
+}
+
+/* Form Groups */
 .form-group {
     margin: 0;
     position: relative;
 }
 
 .form-label {
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     font-weight: 500;
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--spacing-xs);
     display: block;
     color: var(--secondary-color);
     letter-spacing: 0.5px;
 }
 
+/* Sections */
+.auth-section,
+.command-section {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    width: 100%;
+}
+
+.auth-section .form-group,
+.command-section .form-group {
+    flex: 1;
+}
+
+/* Hostname Container */
 .hostname-container {
     position: relative;
     display: flex;
@@ -29,39 +77,38 @@
 
 .settings-icon {
     position: absolute;
-    right: -30px;
+    right: 0;
     top: 50%;
     transform: translateY(-50%);
     color: var(--secondary-color);
     cursor: pointer;
-    transition: color 0.2s ease;
-    padding: 5px;
+    transition: color var(--transition-fast);
+    padding: var(--spacing-sm);
 }
 
 .settings-icon:hover {
     color: var(--text-color);
 }
 
+/* Form Controls */
 .form-control {
     width: 100%;
-    padding: 0.375rem 0.5rem;
+    padding: calc(var(--spacing-sm) - 0.125rem) var(--spacing-sm);
     background: var(--input-background);
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: var(--border-radius-sm);
     color: var(--text-color);
-    font-size: 0.8125rem;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(8px);
+    font-size: var(--font-size-sm);
+    transition: border-color var(--transition-fast),
+                background-color var(--transition-fast),
+                box-shadow var(--transition-fast);
+    backdrop-filter: var(--blur-normal);
     box-sizing: border-box;
 }
 
-/* 자동완성 스타일 수정 */
-.form-control:-webkit-autofill,
-.form-control:-webkit-autofill:hover,
-.form-control:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--text-color);
-    -webkit-box-shadow: 0 0 0px 1000px var(--input-background) inset;
-    transition: background-color 5000s ease-in-out 0s;
+.form-control:hover {
+    border-color: var(--secondary-color);
+    background: var(--hover-color);
 }
 
 .form-control:focus {
@@ -71,125 +118,35 @@
     background: var(--focus-color);
 }
 
-.form-control:hover {
-    border-color: var(--secondary-color);
-    background: var(--hover-color);
-}
-
-.form-control:disabled {
-    opacity: 0.5;
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
+.form-control:disabled,
 .form-control:disabled:hover {
-    background: var(--input-background);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.btn {
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-color);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 0.5rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 500;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    letter-spacing: 0.5px;
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
-    height: 2rem;
-    line-height: 1;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-        125deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        transparent 50%
-    );
-    pointer-events: none;
-}
-
-.btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.btn:disabled {
     opacity: 0.5;
     border-color: rgba(255, 255, 255, 0.1);
+    background: var(--input-background);
 }
 
-.btn:disabled:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.1);
-    transform: none;
-    box-shadow: none;
-}
-
-.btn.cancel {
-    background: rgba(255, 0, 0, 0.1);
-    border-color: rgba(255, 0, 0, 0.2);
-}
-
-.btn.cancel:hover {
-    background: rgba(255, 0, 0, 0.15);
-    border-color: rgba(255, 0, 0, 0.3);
-}
-
+/* Select Controls */
 select.form-control {
-    width: 100%;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23ffffff' viewBox='0 0 16 16'%3E%3Cpath d='M3 6h10l-5 5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.5rem center;
     padding-right: 1.5rem;
     cursor: pointer;
-    transition: none;
 }
 
 select.form-control option {
     background-color: #18181b;
     color: var(--text-color);
-    padding: 0.5rem;
+    padding: var(--spacing-sm);
 }
 
-.auth-section {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    width: 100%;
-}
-
-.command-section {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    width: 100%;
-}
-
-.auth-section .form-group,
-.command-section .form-group {
-    flex: 1;
-}
-
+/* Options Grid */
 .options-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
     width: 100%;
 }
 
@@ -201,152 +158,175 @@ select.form-control option {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    transition: all 0.3s ease-in-out;
+    transition: opacity var(--transition-normal),
+                visibility var(--transition-normal),
+                max-height var(--transition-normal);
 }
 
 #optionsContainer.visible {
     opacity: 1;
     visibility: visible;
     max-height: 500px;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--spacing-lg);
 }
 
+/* Buttons */
 .form-actions {
     text-align: right;
-    margin-top: 1rem;
+    margin-top: var(--spacing-md);
 }
 
-.result {
-    margin-top: 1.5rem;
-    padding: 0.875rem;
-    border-radius: 8px;
-    background: rgba(24, 24, 27, 0.3);
+.btn {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-color);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    font-size: 0.875rem;
-    backdrop-filter: blur(30px);
-    -webkit-backdrop-filter: blur(30px);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    font-size: var(--font-size-md);
+    cursor: pointer;
+    transition: background-color var(--transition-fast),
+                border-color var(--transition-fast),
+                transform var(--transition-fast),
+                box-shadow var(--transition-fast);
+    backdrop-filter: var(--blur-heavy);
+    height: var(--input-height);
+    line-height: 1;
     position: relative;
     overflow: hidden;
-    box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.2),
-        inset 0 0 32px rgba(255, 255, 255, 0.05);
 }
 
-.result::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-        125deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        transparent 30%,
-        transparent 100%
-    );
-    pointer-events: none;
+.btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-normal);
 }
 
-.result.success {
-    background: rgba(0, 255, 0, 0.05);
-    border-color: rgba(0, 255, 0, 0.2);
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.result.error {
-    background: rgba(255, 0, 0, 0.05);
-    border-color: rgba(255, 0, 0, 0.2);
+/* Results */
+.result {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    background: rgba(24, 24, 27, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: var(--font-size-sm);
+    backdrop-filter: var(--blur-heavy);
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-normal);
+    min-height: 32px;
+    display: flex;
+    align-items: center;
 }
 
-.result.loading {
+.result.success { 
+    background: rgba(0, 255, 0, 0.05); 
+    border-color: rgba(0, 255, 0, 0.15); 
+}
+
+.result.error { 
+    background: rgba(255, 0, 0, 0.05); 
+    border-color: rgba(255, 0, 0, 0.15); 
+}
+
+.result.loading { 
     background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.15);
+    padding: var(--spacing-sm) var(--spacing-md);
+    min-height: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
-.result.loading::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 50%;
-    height: 100%;
+.loading-message {
+    text-align: center;
+    color: var(--text-color);
+    font-size: var(--font-size-sm);
+    opacity: 0.8;
+}
+
+.loading-animation {
+    width: 100%;
+    height: 1px;
     background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.1),
+        var(--primary-color),
         transparent
     );
-    animation: loading-shine 1.5s ease infinite;
-}
-
-@keyframes loading-shine {
-    0% {
-        left: -100%;
-    }
-    100% {
-        left: 200%;
-    }
-}
-
-.card {
-    position: relative;
-}
-
-.card-overlay {
+    background-size: 50% 100%;
+    animation: loading-pulse 1s ease-in-out infinite;
     position: absolute;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.03) 0%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.02) 100%
-    );
-    pointer-events: none;
-    z-index: 1;
 }
 
+@keyframes loading-pulse {
+    0% {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+.result-details {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: grid;
+    gap: var(--spacing-xs);
+    color: var(--secondary-color);
+    font-size: var(--font-size-xs);
+}
+
+/* Footer */
 .footer {
     text-align: center;
-    margin-top: 2rem;
+    margin-top: var(--spacing-xl);
     color: rgba(255, 255, 255, 0.3);
-    font-size: 0.75rem;
+    font-size: var(--font-size-xs);
     letter-spacing: 0.5px;
 }
 
+/* Media Queries */
 @media (max-width: 768px) {
     .container {
-        padding: 1rem;
-    }
-
-    .hostname-container {
-        width: 100%;
+        padding: var(--spacing-md);
     }
 
     .settings-icon {
-        right: 10px;
+        right: var(--spacing-sm);
     }
 
     .auth-section,
     .command-section {
         flex-direction: column;
-        gap: 0.75rem;
+        gap: calc(var(--spacing-md) - 0.25rem);
     }
 
     .auth-section .form-group,
     .command-section .form-group {
         max-width: 100%;
     }
-    
-    .form-control {
-        width: 100%;
-    }
 
     .options-grid {
         grid-template-columns: 1fr;
-        gap: 0.75rem;
+        gap: calc(var(--spacing-md) - 0.25rem);
     }
 }
 
@@ -408,9 +388,4 @@ select.form-control option {
 
 .suggestion-item.active {
     background: rgba(255, 255, 255, 0.1);
-}
-
-#commandForm {
-    width: 100%;
-    position: relative;
 } 

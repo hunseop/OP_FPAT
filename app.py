@@ -93,16 +93,88 @@ def execute():
     subcommand = data.get('subcommand')
     options = data.get('options', {})
     
+    # 필수 파라미터 검증
+    if not all([hostname, username, password, firewall_type, command, subcommand]):
+        return jsonify({
+            'status': 'error',
+            'message': 'Missing required parameters'
+        }), 400
+
+    # commands.json 구조에 맞게 명령어 검증
+    if firewall_type not in COMMANDS:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid firewall type: {firewall_type}'
+        }), 400
+        
+    if command not in COMMANDS[firewall_type]:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid command: {command}'
+        }), 400
+        
+    command_data = COMMANDS[firewall_type][command]
+    if not command_data:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid command data for {command}'
+        }), 400
+
+    # subcommand가 직접 값을 가지는 경우 (options가 없는 경우)
+    if not isinstance(command_data, dict):
+        print(data)
+        time.sleep(5)
+        response = {
+            'status': 'success',
+            'message': f'Command executed: {firewall_type} {command} {subcommand}',
+            'details': {
+                'hostname': hostname,
+                'options': options
+            }
+        }
+        return jsonify(response)
+
+    if subcommand not in command_data:
+        return jsonify({
+            'status': 'error',
+            'message': f'Invalid subcommand: {subcommand}'
+        }), 400
+        
+    # 옵션 검증
+    subcommand_data = command_data[subcommand]
+    command_options = {}
+    
+    if isinstance(subcommand_data, dict):
+        command_options = subcommand_data.get('options', {})
+    
+    # 옵션이 있는 경우에만 검증
+    if command_options and options:
+        for key, value in options.items():
+            if key not in command_options:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Invalid option: {key}'
+                }), 400
+                
+            # 필수 옵션 검증
+            option_config = command_options[key]
+            if isinstance(option_config, dict) and option_config.get('required', False) and not value:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Required option missing: {key}'
+                }), 400
+    
     print(data)
-    time.sleep(10)
-    # 여기에 실제 명령어 실행 로직 구현
-    # 현재는 테스트용 응답만 반환
+    time.sleep(5)
+    
+    # 분석 결과 파일명 생성 (예시)
+    filename = f"analysis_{firewall_type}_{command}_{subcommand}_{time.strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
     response = {
         'status': 'success',
-        'message': f'Command executed: {firewall_type} {command} {subcommand}',
+        'message': f'Analysis complete. Results saved to {filename}',
         'details': {
-            'hostname': hostname,
-            'options': options
+            'filename': filename
         }
     }
     

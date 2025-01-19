@@ -283,10 +283,27 @@ function handleSubcommandChange(e) {
         return;
     }
     
+    // 안전한 객체 접근을 위한 체크
+    const firewallCommands = state.commands?.[firewallType];
+    if (!firewallCommands) {
+        console.error(`No commands found for firewall type: ${firewallType}`);
+        return;
+    }
+    
+    const commandObj = firewallCommands?.[command];
+    if (!commandObj) {
+        console.error(`No command object found for command: ${command}`);
+        return;
+    }
+    
+    const subcommandObj = commandObj?.[subcommand];
+    if (!subcommandObj) {
+        console.error(`No subcommand object found for subcommand: ${subcommand}`);
+        return;
+    }
+    
     // 옵션 데이터 접근
-    const commandData = state.commands[firewallType][command][subcommand];
-    console.log('Command data:', commandData);
-    const options = commandData && commandData.options ? commandData.options : {};
+    const options = subcommandObj.options || {};
     console.log('Options:', options);
     
     if (Object.keys(options).length === 0) {
@@ -303,25 +320,18 @@ function handleSubcommandChange(e) {
         </div>
     `).join('');
     
-    // 스타일 디버깅
-    console.log('Container display before:', elements.optionsContainer.style.display);
-    console.log('Container classList before:', elements.optionsContainer.classList);
-    
     elements.optionsContainer.classList.add('visible');
-    
-    console.log('Container display after:', elements.optionsContainer.style.display);
-    console.log('Container classList after:', elements.optionsContainer.classList);
 }
 
 // 옵션 입력 필드 생성
 function createOptionInput(key, option) {
     // 옵션이 배열인 경우 select 타입으로 처리
     if (Array.isArray(option)) {
+        const defaultValue = option[0] || '';
         return `
             <select class="form-control" name="option_${key}" id="option_${key}">
-                <option value="">Select ${key}</option>
                 ${option.map(value => `
-                    <option value="${value}">${value}</option>
+                    <option value="${value}" ${value === defaultValue ? 'selected' : ''}>${value}</option>
                 `).join('')}
             </select>
         `;
@@ -330,11 +340,11 @@ function createOptionInput(key, option) {
     // 옵션이 객체이고 type 속성이 있는 경우
     if (typeof option === 'object' && option !== null) {
         if (Array.isArray(option.type)) {
+            const defaultValue = option.type[0] || '';
             return `
                 <select class="form-control" name="option_${key}" id="option_${key}">
-                    <option value="">Select ${key}</option>
                     ${option.type.map(value => `
-                        <option value="${value}">${value}</option>
+                        <option value="${value}" ${value === defaultValue ? 'selected' : ''}>${value}</option>
                     `).join('')}
                 </select>
             `;
@@ -366,16 +376,40 @@ function createOptionInput(key, option) {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
-    const formData = getFormData();
-    await submitForm(formData);
+    try {
+        const formData = getFormData();
+        
+        // 옵션 필드 검증
+        const optionsFields = elements.optionsFields.querySelectorAll('input, select');
+        let hasError = false;
+        
+        optionsFields.forEach(field => {
+            if (!validateOptionField(field)) {
+                hasError = true;
+            }
+        });
+        
+        if (hasError) {
+            throw new Error('Please fill in all required options correctly.');
+        }
+        
+        await submitForm(formData);
+    } catch (error) {
+        showError(error);
+    }
 }
 
 // 폼 데이터 수집
 function getFormData() {
     const options = {};
     const optionsFields = elements.optionsFields.querySelectorAll('input, select');
+    
     optionsFields.forEach(field => {
-        options[field.name.replace('option_', '')] = field.value;
+        const value = field.value.trim();
+        // 값이 있는 경우에만 options에 추가
+        if (value) {
+            options[field.name.replace('option_', '')] = value;
+        }
     });
 
     return {
@@ -403,6 +437,10 @@ async function submitForm(data) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        
+        if (!response.ok) {
+            throw new Error('Failed to execute command. Please try again.');
+        }
         
         const result = await response.json();
         showResult(result);
@@ -434,7 +472,8 @@ function enableFormElements(inputs, submitButton) {
 function showLoadingState() {
     elements.result.innerHTML = `
         <div class="result loading">
-            Executing command, please wait...
+            <div class="loading-message">Executing command, please wait...</div>
+            <div class="loading-animation"></div>
         </div>
     `;
 }
@@ -450,7 +489,7 @@ function showResult(result) {
 function showError(error) {
     elements.result.innerHTML = `
         <div class="result error">
-            Error occurred: ${error.message}
+            ${error.message}
         </div>
     `;
 }
