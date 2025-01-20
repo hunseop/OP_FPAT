@@ -5,10 +5,13 @@ import os
 import pandas as pd
 from datetime import datetime
 from utils.crypto import HostsEncryption
+from werkzeug.utils import secure_filename
+import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 정적 파일 캐시 비활성화
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
 
 # 호스트 암호화 객체 초기화
 hosts_crypto = HostsEncryption()
@@ -231,6 +234,100 @@ def cleanup_temp_files():
         filepath = os.path.join(TEMP_DIR, filename)
         if os.path.getmtime(filepath) < current_time - 86400:  # 24시간
             os.remove(filepath)
+
+@app.route('/api/hosts/template')
+def download_template():
+    """호스트 등록 템플릿 다운로드"""
+    df = pd.DataFrame(columns=['hostname', 'alias', 'username', 'password'])
+    
+    # 예제 데이터 추가
+    df.loc[0] = ['192.168.1.1', '방화벽1', 'admin', 'password123']
+    df.loc[1] = ['192.168.1.2', '방화벽2', 'admin', 'password456']
+    
+    # 엑셀 파일로 변환
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='host_template.xlsx'
+    )
+
+@app.route('/api/hosts/bulk', methods=['POST'])
+def bulk_add_hosts():
+    """엑셀 파일로 호스트 일괄 등록"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded.'}), 400
+        
+    file = request.files['file']
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        return jsonify({'error': 'Only Excel files are allowed.'}), 400
+
+    try:
+        # 엑셀 파일 읽기
+        df = pd.read_excel(file)
+        required_columns = ['hostname', 'alias', 'username', 'password']
+        
+        # 필수 컬럼 확인
+        if not all(col in df.columns for col in required_columns):
+            return jsonify({'error': 'Required columns are missing.'}), 400
+            
+        # 현재 호스트 목록 로드
+        hosts = load_hosts()
+        results = {
+            'success': [],
+            'failed': []
+        }
+        
+        # 각 행 처리
+        for _, row in df.iterrows():
+            try:
+                hostname = str(row['hostname']).strip()
+                # 기본 유효성 검사
+                if not hostname or pd.isna(hostname):
+                    results['failed'].append({
+                        'hostname': hostname,
+                        'reason': 'Hostname is empty.'
+                    })
+                    continue
+                    
+                # 이미 존재하는 호스트 확인
+                if hostname in hosts:
+                    results['failed'].append({
+                        'hostname': hostname,
+                        'reason': 'Host already exists.'
+                    })
+                    continue
+                
+                # 호스트 추가
+                hosts[hostname] = {
+                    'alias': str(row['alias']).strip(),
+                    'username': str(row['username']).strip(),
+                    'password': str(row['password']).strip()
+                }
+                results['success'].append(hostname)
+                
+            except Exception as e:
+                results['failed'].append({
+                    'hostname': hostname if 'hostname' in locals() else 'Unknown',
+                    'reason': str(e)
+                })
+        
+        # 변경사항 저장
+        if results['success']:
+            save_hosts(hosts)
+        
+        return jsonify({
+            'message': f"{len(results['success'])} host(s) added successfully.",
+            'results': results
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error processing file: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

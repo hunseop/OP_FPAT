@@ -125,6 +125,16 @@ function deleteHostClick(hostname) {
 // 모달 닫기 함수들
 function closeAddModal() {
     modalElements.addModal.style.display = 'none';
+    const fileInput = document.getElementById('excelFile');
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadDefault = uploadArea.querySelector('.upload-default');
+    const uploadSelected = uploadArea.querySelector('.upload-selected');
+    
+    if (fileInput) fileInput.value = '';
+    uploadArea.classList.remove('has-file');
+    uploadDefault.style.display = 'block';
+    uploadSelected.style.display = 'none';
+    switchTab('single');
 }
 
 function closeEditModal() {
@@ -326,4 +336,141 @@ function showNotification(message, type = 'success') {
 }
 
 // 초기화 실행
-document.addEventListener('DOMContentLoaded', initHostManagement); 
+document.addEventListener('DOMContentLoaded', initHostManagement);
+
+// 탭 전환
+function switchTab(tab) {
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+
+    const activeBtn = document.querySelector(`.tab-button[onclick*="${tab}"]`);
+    const activeContent = document.getElementById(`${tab}HostForm`);
+    
+    if (activeBtn && activeContent) {
+        activeBtn.classList.add('active');
+        activeContent.classList.add('active');
+    }
+
+    // 버튼 표시/숨김
+    document.getElementById('singleSaveBtn').style.display = tab === 'single' ? 'inline-block' : 'none';
+    document.getElementById('bulkSaveBtn').style.display = tab === 'bulk' ? 'inline-block' : 'none';
+}
+
+// 파일 선택 처리
+function handleFileSelect(input) {
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadDefault = uploadArea.querySelector('.upload-default');
+    const uploadSelected = uploadArea.querySelector('.upload-selected');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        fileInfo.textContent = file.name;
+        uploadArea.classList.add('has-file');
+        uploadDefault.style.display = 'none';
+        uploadSelected.style.display = 'block';
+    } else {
+        fileInfo.textContent = '';
+        uploadArea.classList.remove('has-file');
+        uploadDefault.style.display = 'block';
+        uploadSelected.style.display = 'none';
+    }
+}
+
+// 파일 선택 해제
+function clearFileSelection(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const fileInput = document.getElementById('excelFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadArea = document.getElementById('uploadArea');
+    
+    if (fileInput) fileInput.value = '';
+    if (fileInfo) fileInfo.textContent = '';
+    if (uploadArea) uploadArea.classList.remove('has-file');
+}
+
+// 파일 크기 포맷
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 템플릿 다운로드
+async function downloadTemplate() {
+    try {
+        const response = await fetch('/api/hosts/template');
+        if (!response.ok) throw new Error('템플릿 다운로드 실패');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'host_template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    } catch (error) {
+        showNotification('템플릿 다운로드 중 오류가 발생했습니다.', 'error');
+    }
+}
+
+// 엑셀 파일 업로드
+async function uploadExcel() {
+    const fileInput = document.getElementById('excelFile');
+    if (!fileInput.files || !fileInput.files[0]) {
+        showNotification('Please select a file.', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+        const response = await fetch('/api/hosts/bulk', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            await refreshHostsTable();
+            showUploadResult(result);
+            if (result.results.success.length > 0) {
+                closeAddModal();
+            }
+        } else {
+            showNotification(result.error, 'error');
+        }
+    } catch (error) {
+        showNotification('Error occurred while uploading file.', 'error');
+    }
+}
+
+// 업로드 결과 표시
+function showUploadResult(result) {
+    const successCount = result.results.success.length;
+    const failedCount = result.results.failed.length;
+    
+    let message = `${successCount} host(s) added successfully.`;
+    if (failedCount > 0) {
+        message += `\n${failedCount} host(s) failed:`;
+        result.results.failed.forEach(fail => {
+            message += `\n- ${fail.hostname}: ${fail.reason}`;
+        });
+    }
+    
+    showNotification(message, failedCount > 0 ? 'warning' : 'success');
+} 
