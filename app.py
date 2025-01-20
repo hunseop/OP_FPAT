@@ -4,22 +4,24 @@ import time
 import os
 import pandas as pd
 from datetime import datetime
+from utils.crypto import HostsEncryption
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 정적 파일 캐시 비활성화
+
+# 호스트 암호화 객체 초기화
+hosts_crypto = HostsEncryption()
 
 # 명령어 구조 로드
 with open('commands.json', 'r') as f:
     COMMANDS = json.load(f)
 
 def load_hosts():
-    with open('hosts.json', 'r') as f:
-        return json.load(f)
+    return hosts_crypto.decrypt_hosts()
 
 def save_hosts(hosts):
-    with open('hosts.json', 'w', encoding='utf-8') as f:
-        json.dump(hosts, f, ensure_ascii=False, indent=4)
+    hosts_crypto.encrypt_hosts(hosts)
 
 # 임시 파일 저장 디렉토리
 TEMP_DIR = 'temp'
@@ -28,7 +30,7 @@ if not os.path.exists(TEMP_DIR):
 
 @app.route('/')
 def index():
-    # 매 요청마다 hosts.json을 새로 읽어옴
+    # 매 요청마다 hosts를 새로 읽어옴
     hosts = load_hosts()
     return render_template('index.html', commands=COMMANDS, hosts=hosts)
 

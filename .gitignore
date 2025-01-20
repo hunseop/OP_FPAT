@@ -169,3 +169,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# FPAT specific
+hosts.json
+hosts.json.bak
+config/.key
+config/hosts.enc
+temp/
