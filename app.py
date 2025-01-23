@@ -7,6 +7,7 @@ from datetime import datetime
 from utils.crypto import HostsEncryption
 from werkzeug.utils import secure_filename
 import io
+from config.commands import COMMANDS, SUBCOMMAND_FUNCTIONS
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
@@ -26,10 +27,10 @@ def load_hosts():
 def save_hosts(hosts):
     hosts_crypto.encrypt_hosts(hosts)
 
-# 임시 파일 저장 디렉토리
-TEMP_DIR = 'temp'
-if not os.path.exists(TEMP_DIR):
-    os.makedirs(TEMP_DIR)
+# 결과 저장 디렉토리 설정
+RESULTS_DIR = 'results'
+if not os.path.exists(RESULTS_DIR):
+    os.makedirs(RESULTS_DIR)
 
 @app.route('/')
 def index():
@@ -113,7 +114,7 @@ def execute():
             'message': 'Missing required parameters'
         }), 400
 
-    # commands.json 구조에 맞게 명령어 검증
+    # commands 구조에 맞게 명령어 검증
     if firewall_type not in COMMANDS:
         return jsonify({
             'status': 'error',
@@ -135,8 +136,6 @@ def execute():
 
     # subcommand가 직접 값을 가지는 경우 (options가 없는 경우)
     if not isinstance(command_data, dict):
-        print(data)
-        time.sleep(5)
         response = {
             'status': 'success',
             'message': f'Command executed: {firewall_type} {command} {subcommand}',
@@ -177,34 +176,33 @@ def execute():
                     'message': f'Required option missing: {key}'
                 }), 400
     
-    print(data)
-    time.sleep(5)
-    
+    # subcommand 함수 호출
     try:
-        # 임시 데이터프레임 생성 (예시)
-        df = pd.DataFrame({
-            'Command': [f"{firewall_type} {command} {subcommand}"],
-            'Hostname': [hostname],
-            'Timestamp': [datetime.now()]
-        })
-        
-        # 파일명 생성
-        filename = f"{time.strftime('%Y%m%d')}_{hostname}_{subcommand}.xlsx"
-        filepath = os.path.join(TEMP_DIR, filename)
-        
-        # 엑셀 파일로 저장
-        df.to_excel(filepath, index=False)
-        
-        response = {
-            'status': 'success',
-            'message': f'Analysis complete. Click download button to save the results.',
-            'details': {
-                'filename': filename
-            }
-        }
-        
-        return jsonify(response)
-        
+        command_fuction = SUBCOMMAND_FUNCTIONS[firewall_type][command][subcommand]
+    except KeyError:
+        return jsonify({"status": "error", "message": "Invalid command or subcommand"}), 400
+
+    try:
+        # 명령어 함수 실행
+        if callable(command_function):
+            # 명령어 실행 후 결과받기
+            result_data = command_fuction(hostname, username, password, subcommand, options) if "options" in command_fuction.__code__.co_varnames else command_fuction(hostname, username, password, subcommand)
+
+            if isinstance(result_data, dict):
+                return jsonify(result_data)
+            elif isinstance(result_data, str):
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Analysis complete. Click download button to save the results.',
+                    'details': {
+                        'filename': result_data
+                    }
+                })
+            else:
+                return jsonify({"status": "error", "message": "Undified Return"}), 500
+        else:
+            return jsonify({"status": "error", "message": "Command not callable"}), 500
+            
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -214,7 +212,7 @@ def execute():
 @app.route('/download/<filename>')
 def download_file(filename):
     try:
-        filepath = os.path.join(TEMP_DIR, filename)
+        filepath = os.path.join(RESULTS_DIR, filename)
         return send_file(
             filepath,
             as_attachment=True,
@@ -230,8 +228,8 @@ def download_file(filename):
 def cleanup_temp_files():
     # 24시간 이상 된 파일 삭제
     current_time = time.time()
-    for filename in os.listdir(TEMP_DIR):
-        filepath = os.path.join(TEMP_DIR, filename)
+    for filename in os.listdir(RESULTS_DIR):
+        filepath = os.path.join(RESULTS_DIR, filename)
         if os.path.getmtime(filepath) < current_time - 86400:  # 24시간
             os.remove(filepath)
 
