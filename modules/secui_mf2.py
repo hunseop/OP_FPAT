@@ -179,16 +179,16 @@ def download_object_files(host, port, username, password, remote_directory, loca
 
     try:
         stdin, stdout, stderr = ssh.exec_command(f'cd {remote_directory} && {CONF_DIRECTORY}')
-        file_lines_fwrules = stdout.readlines()
+        file_lines_conf = stdout.readlines()
 
         downloaded_files = []
         with SCPClient(ssh.get_transport()) as scp:
-            if file_lines_fwrules:
-                latest_fwrules_file = file_lines_fwrules[0].split()[-1]
-                remote_path = os.path.join(remote_directory, latest_fwrules_file)
-                local_path = os.path.join(local_directory, f'{host}_{latest_fwrules_file}')
+            if file_lines_conf:
+                latest_conf_file = file_lines_conf[0].split()[-1]
+                remote_path = os.path.join(remote_directory, latest_conf_file)
+                local_path = os.path.join(local_directory, f'{host}_{latest_conf_file}')
                 scp.get(remote_path, local_path)
-                downloaded_files.append(f'{host}_{latest_fwrules_file}')
+                downloaded_files.append(f'{host}_{latest_conf_file}')
 
             specified_conf_files = [
                 'groupobject.conf',
@@ -344,7 +344,8 @@ def service_parsing(file_path):
                 data[key] = match.group(1)
         data_list.append(data)
     
-    return de
+    df = pd.DataFrame(data_list)
+    return df
 
 def network_parsing(file_path):
     content = remove_newlines_from_file(file_path)
@@ -463,12 +464,13 @@ def export_objects(device_ip, username, password):
     network_file = f'{files[2]}'
     service_file = f'{files[3]}'
 
-    address_df, address_group_df = export_address_objects(group_file, host_file, network_file)
-    service_df = export_service_objects(service_file)
+    address_df, address_group_df = host_parsing(host_file), group_parsing(group_file)
+    network_df = network_parsing(network_file)
+    service_df = service_parsing(service_file)
     
     delete_files(files)
 
-    return [address_df, address_group_df, service_df]
+    return [address_df, address_group_df, network_df, service_df]
 
 def export_security_rules(device_ip, username, password):
     file = download_rule_file(device_ip, 22, username, password, '/temp/','./')
