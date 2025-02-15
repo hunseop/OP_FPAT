@@ -135,7 +135,7 @@ def parse_request_type():
         match_3 = pattern_3.match(description)
         name_match = pattern_1_rulename.match(str(rulename))
         user_match = re.search(pattern_1_user, description)
-        desc_match = re.search(rulename_1, description)
+        desc_match = re.search(rulename_1_rulename, description)
         date_match = re.search(rulename_1_date, description)
 
         if match_3:
@@ -214,7 +214,7 @@ def extract_request_id():
     # 각 Request Type별로 Request ID 값만 추출하여 중복 제거 후 Excel의 각 시트로 저장
     with pd.ExcelWriter(f"request_id_{file_name}") as writer:
         for request_type, group in selected_data.groupby('Request Type'):
-            group[['Request ID']].drop_duplicates().to_excel(wirter, sheet_name=request_type, index=False)
+            group[['Request ID']].drop_duplicates().to_excel(writer, sheet_name=request_type, index=False)
 
 # 3. add request info
 def add_request_info():
@@ -264,7 +264,7 @@ def add_request_info():
     
     rule_df = read_and_process_excel(rule_file)
     info_df = read_and_process_excel(info_file)
-    info_df = info.sort_values(by='REQUEST_END_DATE', ascending=False)
+    info_df = info_df.sort_values(by='REQUEST_END_DATE', ascending=False)
     auto_extension_id = find_auto_extension_id()
     match_and_update_df(rule_df, info_df)
     rule_df.replace({'nan': None}, inplace=True)
@@ -368,7 +368,7 @@ def secui_exception():
     df.loc[df['REQUEST_STATUS'] == 99, '예외'] = '자동연장정책'
 
     # 4.
-    dney_str_rule_index = df[df['Description'].str.contains('deny_rule') == True].index[0]
+    deny_std_rule_index = df[df['Description'].str.contains('deny_rule') == True].index[0]
     df.log[df.index < deny_std_rule_index, '예외'] = '인프라정책'
 
     # 5.
