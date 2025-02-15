@@ -2,9 +2,44 @@ import os
 import pandas as pd
 import logging
 import re
+import shutil
+import tempfile
+from pathlib import Path
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, PatternFill, Font
+
+class PolicyStatus:
+    """정책 상태 관련 상수"""
+    AUTO_EXTENSION = [98, 99]  # 자동연장 상태 코드
+    DEFAULT_DATE = '19000101'  # 기본 날짜값 (1900년 1월 1일)
+    RECENT_PERIOD_DAYS = 90  # 최근 정책 판단 기준 일수 (3개월)
+
+class PolicyType:
+    """정책 유형 관련 상수"""
+    GROUP = 'GROUP'    # 그룹 정책 (P로 시작)
+    NORMAL = 'NORMAL'  # 일반 정책 (F로 시작)
+    SERVER = 'SERVER'  # 서버 정책 (S로 시작)
+    PAM = 'PAM'       # PAM 정책 (M으로 시작)
+    OLD = 'OLD'       # 이전 정책
+    UNKNOWN = 'Unknown'  # 알 수 없는 정책
+
+class ExceptionType:
+    """예외 정책 유형 관련 상수"""
+    EXCEPTION = '예외신청정책'
+    AUTO_EXTENSION = '자동연장정책'
+    NEW = '신규정책'
+    INFRASTRUCTURE = '인프라정책'
+    TEST_GROUP = 'test_group_정책'
+    DISABLED = '비활성화정책'
+    STANDARD = '기준정책'
+    BLOCK = '차단정책'
+
+class ExpirationStatus:
+    """만료 상태 관련 상수"""
+    EXPIRED = '만료'
+    NOT_EXPIRED = '미만료'
 
 # Config
 COLUMNS = [
@@ -46,13 +81,94 @@ EXCEPT_LIST = [
     'sample',
 ]
 
-AUTO_EXTENSION_STATUS = [98, 99]  # REQUEST_STATUS의 자동연장 상태 코드
-DEFAULT_DATE = '19000101'  # 기본 날짜 값
-RECENT_PERIOD_DAYS = 90  # 최근 정책 판단 기준 일수
-
 class PolicyProcessor:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self._backup_dir = Path("backups")
+        self._backup_dir.mkdir(exist_ok=True)
+
+    def _create_backup(self, file_path: str) -> Path:
+        """
+        파일의 백업을 생성합니다.
+        
+        Args:
+            file_path (str): 백업할 파일 경로
+            
+        Returns:
+            Path: 백업 파일 경로
+        """
+        source_path = Path(file_path)
+        if not source_path.exists():
+            raise FileNotFoundError(f"백업할 파일을 찾을 수 없습니다: {file_path}")
+            
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = self._backup_dir / f"{source_path.stem}_{timestamp}{source_path.suffix}"
+        
+        shutil.copy2(source_path, backup_path)
+        self.logger.info(f"파일 백업 생성 완료: {backup_path}")
+        return backup_path
+        
+    @contextmanager
+    def _safe_file_operation(self, file_path: str, mode: str = "wb"):
+        """
+        안전한 파일 작업을 위한 컨텍스트 매니저
+        
+        Args:
+            file_path (str): 대상 파일 경로
+            mode (str): 파일 열기 모드
+        """
+        target_path = Path(file_path)
+        
+        # 파일 권한 검사
+        if target_path.exists():
+            if not os.access(target_path, os.W_OK):
+                raise PermissionError(f"파일에 쓰기 권한이 없습니다: {file_path}")
+        elif not os.access(target_path.parent, os.W_OK):
+            raise PermissionError(f"디렉토리에 쓰기 권한이 없습니다: {target_path.parent}")
+            
+        # 임시 파일 생성
+        temp_fd, temp_path = tempfile.mkstemp(dir=target_path.parent)
+        os.close(temp_fd)
+        temp_path = Path(temp_path)
+        
+        try:
+            # 백업 생성
+            if target_path.exists():
+                self._create_backup(file_path)
+                
+            yield temp_path
+            
+            # 임시 파일을 대상 파일로 이동 (원자적 작업)
+            temp_path.replace(target_path)
+            self.logger.debug(f"파일 작업 완료: {file_path}")
+            
+        except Exception as e:
+            if temp_path.exists():
+                temp_path.unlink()
+            raise e
+            
+    def _safe_excel_save(self, df: pd.DataFrame, file_path: str, **kwargs):
+        """
+        데이터프레임을 안전하게 엑셀 파일로 저장합니다.
+        
+        Args:
+            df (pd.DataFrame): 저장할 데이터프레임
+            file_path (str): 저장할 파일 경로
+            **kwargs: pandas.DataFrame.to_excel에 전달할 추가 인자
+        """
+        with self._safe_file_operation(file_path) as temp_path:
+            df.to_excel(temp_path, **kwargs)
+            
+    def _safe_workbook_save(self, wb, file_path: str):
+        """
+        워크북을 안전하게 저장합니다.
+        
+        Args:
+            wb: openpyxl Workbook 객체
+            file_path (str): 저장할 파일 경로
+        """
+        with self._safe_file_operation(file_path) as temp_path:
+            wb.save(temp_path)
 
     def _update_version(self, filename: str, final_version: bool = False) -> str:
         """
@@ -116,7 +232,7 @@ class PolicyProcessor:
                 cell = sheet.cell(row=2, column=col)
                 cell.fill = PatternFill(start_color='ccffff', end_color='ccffff', fill_type='solid')
         
-        wb.save(file_name)
+        self._safe_workbook_save(wb, file_name)
 
     def parse_request_type(self, file_path: str):
         """
@@ -138,13 +254,13 @@ class PolicyProcessor:
         
         def parse_request_info(rulename, description):
             data_dict = {
-                "Request Type": "Unknown",
+                "Request Type": PolicyType.UNKNOWN,
                 "Request ID": None,
                 "Ruleset ID": None,
                 "MIS ID": None,
                 "Request User": None,
-                "Start Date": convert_to_date(DEFAULT_DATE),
-                "End Date": convert_to_date(DEFAULT_DATE),
+                "Start Date": convert_to_date(PolicyStatus.DEFAULT_DATE),
+                "End Date": convert_to_date(PolicyStatus.DEFAULT_DATE),
             }
 
             if pd.isnull(description):
@@ -177,19 +293,19 @@ class PolicyProcessor:
                 
                 type_code = data_dict["Request ID"][:1]
                 if type_code == "P":
-                    data_dict["Request Type"] = "GROUP"
+                    data_dict["Request Type"] = PolicyType.GROUP
                 elif type_code == "F":
-                    data_dict["Request Type"] = "NORMAL"
+                    data_dict["Request Type"] = PolicyType.NORMAL
                 elif type_code == "S":
-                    data_dict["Request Type"] = "SERVER"
+                    data_dict["Request Type"] = PolicyType.SERVER
                 elif type_code == "M":
-                    data_dict["Request Type"] = "PAM"
+                    data_dict["Request Type"] = PolicyType.PAM
                 else:
-                    data_dict["Request Type"] = "Unknown"
+                    data_dict["Request Type"] = PolicyType.UNKNOWN
             
             if name_match:
                 data_dict.update({
-                    'Request Type': "OLD",
+                    'Request Type': PolicyType.OLD,
                     'Request ID': name_match.group(1)
                 })
                 if user_match:
@@ -204,7 +320,7 @@ class PolicyProcessor:
                 end_date = date.split('~')[1].replace(']', '').replace('-', '')
 
                 data_dict.update({
-                    "Request Type": "OLD",
+                    "Request Type": PolicyType.OLD,
                     "Request ID": desc_match.group(1).split('-')[1],
                     "Ruleset ID": None,
                     "MIS ID": None,
@@ -233,7 +349,8 @@ class PolicyProcessor:
                     df.at[index, key] = value
             
             self.logger.info("정책 파싱 완료")
-            df.to_excel(self._update_version(file_path), index=False)
+            output_file = self._update_version(file_path)
+            self._safe_excel_save(df, output_file, index=False)
             
         except FileNotFoundError:
             self.logger.error(f"파일을 찾을 수 없습니다: {file_path}")
@@ -264,13 +381,14 @@ class PolicyProcessor:
             selected_data = df[df['Request Type'].isin(selected_types)]
 
             output_file = f"request_id_{file_path}"
-            with pd.ExcelWriter(output_file) as writer:
-                for request_type, group in selected_data.groupby('Request Type'):
-                    group[['Request ID']].drop_duplicates().to_excel(
-                        writer, 
-                        sheet_name=request_type, 
-                        index=False
-                    )
+            with self._safe_file_operation(output_file) as temp_path:
+                with pd.ExcelWriter(temp_path) as writer:
+                    for request_type, group in selected_data.groupby('Request Type'):
+                        group[['Request ID']].drop_duplicates().to_excel(
+                            writer, 
+                            sheet_name=request_type, 
+                            index=False
+                        )
             self.logger.info(f"신청번호 추출 완료: {output_file}")
             
         except FileNotFoundError:
@@ -348,14 +466,14 @@ class PolicyProcessor:
             info_df = read_and_process_excel(info_file_path)
             
             info_df = info_df.sort_values(by='REQUEST_END_DATE', ascending=False)
-            auto_extension_id = info_df[info_df['REQUEST_STATUS'].isin(AUTO_EXTENSION_STATUS)]['REQUEST_ID'].drop_duplicates()
+            auto_extension_id = info_df[info_df['REQUEST_STATUS'].isin(PolicyStatus.AUTO_EXTENSION)]['REQUEST_ID'].drop_duplicates()
             
             match_and_update_df(rule_df, info_df)
             rule_df.replace({'nan': None}, inplace=True)
             rule_df.loc[rule_df['REQUEST_ID'].isin(auto_extension_id), 'REQUEST_STATUS'] = '99'
             
             output_file = self._update_version(rule_file_path)
-            rule_df.to_excel(output_file, index=False)
+            self._safe_excel_save(rule_df, output_file, index=False)
             self.logger.info(f"정책 정보 업데이트 완료: {output_file}")
             
         except Exception as e:
@@ -387,53 +505,53 @@ class PolicyProcessor:
             raise
 
         current_date = datetime.now()
-        three_months_ago = current_date - timedelta(days=RECENT_PERIOD_DAYS)
+        three_months_ago = current_date - timedelta(days=PolicyStatus.RECENT_PERIOD_DAYS)
 
         df["예외"] = ''
 
         # 1. 예외 신청정책 처리
         df['REQUEST_ID'] = df['REQUEST_ID'].fillna('')
         for id in EXCEPT_LIST:
-            df.loc[df['REQUEST_ID'].str.startswith(id, na=False), '예외'] = '예외신청정책'
+            df.loc[df['REQUEST_ID'].str.startswith(id, na=False), '예외'] = ExceptionType.EXCEPTION
         
         # 2. 자동연장 정책 처리
-        df.loc[df['REQUEST_STATUS'].isin(AUTO_EXTENSION_STATUS), '예외'] = '자동연장정책'
+        df.loc[df['REQUEST_STATUS'].isin(PolicyStatus.AUTO_EXTENSION), '예외'] = ExceptionType.AUTO_EXTENSION
 
         # 3. 신규 정책 처리
         df['날짜'] = df['Rule Name'].str.extract(r'(\d{8})', expand=False)
         df['날짜'] = pd.to_datetime(df['날짜'], format='%Y%m%d', errors='coerce')
-        df.loc[(df['날짜'] >= three_months_ago) & (df['날짜'] <= current_date), '예외'] = '신규정책'
+        df.loc[(df['날짜'] >= three_months_ago) & (df['날짜'] <= current_date), '예외'] = ExceptionType.NEW
 
         if vendor_type == 'paloalto':
             # 4. 인프라 정책 처리
             deny_std_rule_index = df[df['Rule Name'] == 'deny_rule'].index[0]
-            df.loc[df.index < deny_std_rule_index, '예외'] = '인프라정책'
+            df.loc[df.index < deny_std_rule_index, '예외'] = ExceptionType.INFRASTRUCTURE
 
             # 5. 테스트 그룹 정책 처리
-            df.loc[df['Rule Name'].str.startswith(('sample_', 'test_')), '예외'] = 'test_group_정책'
+            df.loc[df['Rule Name'].str.startswith(('sample_', 'test_')), '예외'] = ExceptionType.TEST_GROUP
 
             # 6. 비활성화 정책 처리
-            df.loc[df['Enable'] == 'N', '예외'] = '비활성화정책'
+            df.loc[df['Enable'] == 'N', '예외'] = ExceptionType.DISABLED
 
             # 7. 기준 정책 처리
-            df.loc[(df['Rule Name'].str.endswith('_Rule')) & (df['Enable'] == 'N'), '예외'] = '기준정책'
+            df.loc[(df['Rule Name'].str.endswith('_Rule')) & (df['Enable'] == 'N'), '예외'] = ExceptionType.STANDARD
 
         elif vendor_type == 'secui':
             # 4. 인프라 정책 처리
             deny_std_rule_index = df[df['Description'].str.contains('deny_rule')].index[0]
-            df.loc[df.index < deny_std_rule_index, '예외'] = '인프라정책'
+            df.loc[df.index < deny_std_rule_index, '예외'] = ExceptionType.INFRASTRUCTURE
 
             # 5. 테스트 그룹 정책 처리
-            df.loc[df['Description'].str.contains(('sample_', 'test_')), '예외'] = 'test_group_정책'
+            df.loc[df['Description'].str.contains(('sample_', 'test_')), '예외'] = ExceptionType.TEST_GROUP
 
             # 6. 비활성화 정책 처리
-            df.loc[df['Enable'] == 'N', '예외'] = '비활성화정책'
+            df.loc[df['Enable'] == 'N', '예외'] = ExceptionType.DISABLED
 
             # 7. 기준 정책 처리
-            df.loc[(df['Description'].str.contains('기준룰')) & (df['Enable'] == 'N'), '예외'] = '기준정책'
+            df.loc[(df['Description'].str.contains('기준룰')) & (df['Enable'] == 'N'), '예외'] = ExceptionType.STANDARD
 
         # 8. 차단 정책 처리
-        df.loc[df['Action'] == 'deny', '예외'] = '차단정책'
+        df.loc[df['Action'] == 'deny', '예외'] = ExceptionType.BLOCK
 
         df['예외'].fillna('', inplace=True)
 
@@ -443,7 +561,14 @@ class PolicyProcessor:
         df = df[cols]
 
         # 만료여부 체크
-        df['만료여부'] = df.apply(lambda row: '미만료' if pd.to_datetime(row['REQUEST_END_DATE']) > datetime.now() else '만료' if pd.notna(row['REQUEST_END_DATE']) else '만료', axis=1)
+        df['만료여부'] = df.apply(
+            lambda row: ExpirationStatus.NOT_EXPIRED 
+            if pd.to_datetime(row['REQUEST_END_DATE']) > datetime.now() 
+            else ExpirationStatus.EXPIRED 
+            if pd.notna(row['REQUEST_END_DATE']) 
+            else ExpirationStatus.EXPIRED, 
+            axis=1
+        )
 
         df.drop(columns=['날짜'], inplace=True)
         df.rename(columns={'Request Type': '신청이력'}, inplace=True)
@@ -458,7 +583,8 @@ class PolicyProcessor:
         cols.insert(cols.index('만료여부') + 1, '미사용여부')
         df['미사용여부'] = ''
 
-        df.to_excel(self._update_version(file_path, True), index=False)
+        output_file = self._update_version(file_path, True)
+        self._safe_excel_save(df, output_file, index=False)
 
     def organize_redundant_file(self, file_path: str):
         """
@@ -541,9 +667,9 @@ class PolicyProcessor:
 
         # 파일 저장
         base_name = os.path.splitext(file_path)[0]
-        df.to_excel(f'{base_name}_정리.xlsx', index=False)
-        notice_df.to_excel(f'{base_name}_공지.xlsx', index=False)
-        delete_df.to_excel(f'{base_name}_삭제.xlsx', index=False)
+        self._safe_excel_save(df, f'{base_name}_정리.xlsx', index=False)
+        self._safe_excel_save(notice_df, f'{base_name}_공지.xlsx', index=False)
+        self._safe_excel_save(delete_df, f'{base_name}_삭제.xlsx', index=False)
 
     def add_mis_id(self, rule_file_path: str, mis_file_path: str):
         """
@@ -577,7 +703,7 @@ class PolicyProcessor:
             )
 
             output_file = self._update_version(rule_file_path)
-            rule_df.to_excel(output_file, index=False)
+            self._safe_excel_save(rule_df, output_file, index=False)
             self.logger.info(f"MIS ID 정보 업데이트 완료: {output_file}")
             
         except FileNotFoundError as e:
@@ -657,5 +783,5 @@ class PolicyProcessor:
         selected_df.fillna('', inplace=True)
         selected_df.replace('nan', '', inplace=True)
         
-        selected_df.to_excel(filename, index=False, na_rep='', sheet_name=sheet_type)
+        self._safe_excel_save(selected_df, filename, index=False, na_rep='', sheet_name=sheet_type)
         self._save_to_excel(selected_df, sheet_type, filename)
