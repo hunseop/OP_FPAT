@@ -139,7 +139,7 @@ class PaloAltoAPI:
             ('xpath', '/config')
         )
 
-        response = self.get_api.data(parameter)
+        response = self.get_api_data(parameter)
 
         return response.text
     
@@ -276,9 +276,9 @@ class PaloAltoAPI:
     def export_network_group_objects(self, config_type: str = 'running'):
         config = self.get_config(config_type)
         tree = ET.fromstring(config)
-        address_group_list = tree.findall('./result/config/devices/entry/vsys/entry/address-group/entry')
+        address_groups_list = tree.findall('./result/config/devices/entry/vsys/entry/address-group/entry')
         address_group_objects = []
-        for address_group in address_group_list:
+        for address_group in address_groups_list:
             group = address_group.attrib.get('name')
             group_name = group
             group_member = []
@@ -345,7 +345,7 @@ class PaloAltoAPI:
             ('key', self.api_key)
         )
 
-        response = self.get_api.data(parameter)
+        response = self.get_api_data(parameter)
         tree = ET.fromstring(response.text)
         rules = tree.findall('./result/rule-hit-count/vsys/entry/rule-base/entry/rules/entry')
 
