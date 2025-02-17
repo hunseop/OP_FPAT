@@ -4,9 +4,9 @@ import paramiko
 from scp import SCPClient
 import os
 
-POLICY_DIRECTORY = 'ls'
-CONF_DIRECTORY = 'ls'
-INFO_FILE = 'cat infofile'
+POLICY_DIRECTORY = 'ls -ls *.fwrules'
+CONF_DIRECTORY = 'ls *.conf'
+INFO_FILE = 'cat /etc/SECUIMF2.info'
 
 # 객체 싱을 위한 정규식 패턴 정보
 HOST_PATTERN = {
@@ -52,7 +52,7 @@ GROUP_PATTERN = {
 SERVICE_PATTERN = {
     'id': r'id = (\d+)',
     'name': r'name = "([^"]+)"',
-    'protocol': r'protocol="([^"]+),',
+    'protocol': r'protocol="([^"]+)",',
     'str_src_port': r'str_src_port="([^"]+)",',
     'str_svc_port': r'str_svc_port="([^"]+)",',
     'svc_type': r'svc_type="([^"]+)",',
@@ -179,17 +179,10 @@ def download_object_files(host, port, username, password, remote_directory, loca
 
     try:
         stdin, stdout, stderr = ssh.exec_command(f'cd {remote_directory} && {CONF_DIRECTORY}')
-        file_lines_fwrules = stdout.readlines()
+        file_lines_conf = stdout.readlines()
 
         downloaded_files = []
         with SCPClient(ssh.get_transport()) as scp:
-            if file_lines_fwrules:
-                latest_fwrules_file = file_lines_fwrules[0].split()[-1]
-                remote_path = os.path.join(remote_directory, latest_fwrules_file)
-                local_path = os.path.join(local_directory, f'{host}_{latest_fwrules_file}')
-                scp.get(remote_path, local_path)
-                downloaded_files.append(f'{host}_{latest_fwrules_file}')
-
             specified_conf_files = [
                 'groupobject.conf',
                 'hostobject.conf',
@@ -401,10 +394,10 @@ def rule_parsing(file_path):
     use_pattern = r"use=\"(.*?)\", action"
     action_pattern = r"action=\"(.*?)\", group"
     shaping_string_pattern = r"shaping_string=\"(.*?)\", bi_di"
-    source_pattern = r"from=\{(.*?)\},  to"
-    destination_pattern = r"to=\{(.*?)\},  service"
-    service_pattern = r"service=\{(.*?)\},  vid"
-    ua_pattern = r"ua=\{(.*?)\}, unuse"
+    source_pattern = r"from = \{(.*?)\},  to"
+    destination_pattern = r"to = \{(.*?)\},  service"
+    service_pattern = r"service = \{(.*?)\},  vid"
+    ua_pattern = r"ua = \{(.*?)\}, unuse"
 
     policy = []
     for idx, rule in enumerate(rule_data):
@@ -432,7 +425,7 @@ def rule_parsing(file_path):
             "User": parse_object(ua[0]),
             "Destination": parse_object(destination[0]),
             "Service": parse_object(service[0]),
-            "Applicationn": "Any",
+            "Application": "Any",
             "Security Profile": schedule,
             "Description": str(description[0]),
         }
@@ -456,7 +449,7 @@ def delete_files(file_paths):
 
 def export_objects(device_ip, username, password):
     files = download_object_files(
-        device_ip, 22, username, password, '/temp/', './'
+        device_ip, 22, username, password, '/secui/etc/', './'
     )
     group_file = f'{files[0]}'
     host_file = f'{files[1]}'
@@ -487,3 +480,49 @@ def replace_values(ids, mapping):
     # 콤마로 구분된 문자열을 리스트로 변환하고 각 원소에 대응하는 값을 찾음
     return ','.join(mapping.get(id_str, '') for id_str in ids.split(','))
 
+def combine_group_objects(row):
+    values = [row['convert_hosts'], row['convert_networks']]
+    filtered_values = [value for value in values if value and value.strip()]
+    return ','.join(filtered_values)
+
+def export_address_objects(group_file, host_file, network_file):
+    group_df = group_parsing(group_file)
+    network_df = network_parsing(network_file)
+    host_df = host_parsing(host_file)
+    network_df['Value'] = network_df.apply(combine_mask_end, axis=1)
+    network_ids = dict(zip(network_df['id'].astype(str), network_df['Value']))
+    host_ids = dict(zip(host_df['id'].astype(str), host_df['ip']))
+
+    group_df['convert_networks'] = group_df['networks'].apply(lambda x: replace_values(x, network_ids))
+    group_df['convert_hosts'] = group_df['hosts'].apply(lambda x: replace_values(x, host_ids))
+    group_df['Entry'] = group_df.apply(combine_group_objects, axis=1)
+
+    group_df = group_df[['name', 'Entry']]
+    group_df.columns = ['Group Name', 'Entry']
+    network_df = network_df[['name', 'Value']]
+    network_df.columns = ['Name', 'Value']
+    host_df = host_df[['name', 'ip']]
+    host_df.columns = ['Name', 'Value']
+    network_objects_df = pd.concat([host_df, network_df], axis=0, ignore_index=True)
+
+    return network_objects_df, group_df
+
+def export_service_objects(service_file):
+    service_df = service_parsing(service_file)
+    service_df = service_df[['name', 'protocol', 'str_svc_port']]
+    service_df.columns = ['Name', 'Protocol', 'Port']
+
+    return service_df
+
+def save_dfs_to_excel(dfs, sheet_names, file_name):
+    try:
+        if not isinstance(dfs, list):
+            dfs = [dfs]
+        if not isinstance(sheet_names, list):
+            sheet_names = [sheet_names]
+        with pd.ExcelWriter(file_name) as writer:
+            for df, sheet_name in zip(dfs, sheet_names):
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+        return True
+    except:
+        return False    
