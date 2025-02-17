@@ -57,82 +57,41 @@ class PaloAltoAPI:
         self.base_url = f'https://{hostname}/api/'
         self.api_key = self._get_api_key(username, password)
 
-    # def save_dfs_to_excel(self, dataframes, sheet_names, file_name: str) -> bool:
-    #     """
-    #     여러 DataFrame을 하나의 엑셀 파일에 저장하고 스타일을 적용합니다.
-
-    #     :param dataframes: DataFrame 또는 DataFrame 리스트
-    #     :param sheet_names: 시트 이름 또는 시트 이름 리스트
-    #     :param file_name: 저장할 엑셀 파일 이름
-    #     :return: 저장 성공 여부
-    #     """
-    #     try:
-    #         if not isinstance(dataframes, list):
-    #             dataframes = [dataframes]
-    #         if not isinstance(sheet_names, list):
-    #             sheet_names = [sheet_names]
-
-    #         with pd.ExcelWriter(file_name) as writer:
-    #             for df, sheet in zip(dataframes, sheet_names):
-    #                 df.to_excel(writer, sheet_name=sheet, index=False)
-
-    #         apply_excel_style(file_name)
-    #         return True
-    #     except Exception as error:
-    #         logging.error("DataFrame 엑셀 저장 중 오류 발생: %s", error)
-    #         return False
-
-    # def save_df_to_excel(self, dataframe: pd.DataFrame, sheet_name: str) -> None:
-    #     """
-    #     단일 DataFrame을 엑셀 파일로 저장합니다.
-
-    #     :param dataframe: 저장할 DataFrame
-    #     :param sheet_name: 시트 이름
-    #     :raises FileExistsError: 동일 파일이 이미 존재하는 경우
-    #     """
-    #     current_date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    #     file_name = f"{current_date}_{self.hostname}_{sheet_name}.xlsx"
-    #     if os.path.isfile(file_name):
-    #         raise FileExistsError(f"File '{file_name}' already exists")
-
-    #     with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
-    #         dataframe.to_excel(writer, sheet_name=sheet_name, index=False)
-
-def save_to_excel(self, data, sheet_names=None) -> str:
-    """
-    단일 DataFrame 또는 DataFrame 리스트를 엑셀 파일로 저장합니다.
-    파일 이름은 현재 날짜, 호스트명, 시트명을 활용하여 자동 생성됩니다.
-    
-    :param data: 저장할 DataFrame 또는 DataFrame 리스트
-    :param sheet_names: 단일 시트명(str) 또는 시트명 리스트 (옵션)
-                        리스트가 아닌 경우 단일 시트로 저장됩니다.
-                        기본값은 단일 시트의 경우 "Sheet1",
-                        다중 시트의 경우 "Sheet1", "Sheet2", ... 로 지정됩니다.
-    :return: 생성된 엑셀 파일 이름
-    """
-    current_date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    
-    # 단일 DataFrame인 경우
-    if not isinstance(data, list):
-        sheet_name = sheet_names if isinstance(sheet_names, str) else "Sheet1"
-        file_name = f"{current_date}_{self.hostname}_{sheet_name}.xlsx"
-        with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
-            data.to_excel(writer, sheet_name=sheet_name, index=False)
-    else:
-        # 여러 DataFrame인 경우
-        num_sheets = len(data)
-        if sheet_names is None:
-            sheet_names = [f"Sheet{i+1}" for i in range(num_sheets)]
-        elif not isinstance(sheet_names, list):
-            sheet_names = [sheet_names]
-        file_name = f"{current_date}_{self.hostname}_combined.xlsx"
-        with pd.ExcelWriter(file_name) as writer:
-            for df, sheet in zip(data, sheet_names):
-                df.to_excel(writer, sheet_name=sheet, index=False)
-    
-    # 엑셀 파일에 스타일 적용 (모든 시트)
-    apply_excel_style(file_name)
-    return file_name
+    def save_to_excel(self, data, sheet_names=None) -> str:
+        """
+        단일 DataFrame 또는 DataFrame 리스트를 엑셀 파일로 저장합니다.
+        파일 이름은 현재 날짜, 호스트명, 시트명을 활용하여 자동 생성됩니다.
+        
+        :param data: 저장할 DataFrame 또는 DataFrame 리스트
+        :param sheet_names: 단일 시트명(str) 또는 시트명 리스트 (옵션)
+                            리스트가 아닌 경우 단일 시트로 저장됩니다.
+                            기본값은 단일 시트의 경우 "Sheet1",
+                            다중 시트의 경우 "Sheet1", "Sheet2", ... 로 지정됩니다.
+        :return: 생성된 엑셀 파일 이름
+        """
+        current_date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+        
+        # 단일 DataFrame인 경우
+        if not isinstance(data, list):
+            sheet_name = sheet_names if isinstance(sheet_names, str) else "Sheet1"
+            file_name = f"{current_date}_{self.hostname}_{sheet_name}.xlsx"
+            with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
+                data.to_excel(writer, sheet_name=sheet_name, index=False)
+        else:
+            # 여러 DataFrame인 경우
+            num_sheets = len(data)
+            if sheet_names is None:
+                sheet_names = [f"Sheet{i+1}" for i in range(num_sheets)]
+            elif not isinstance(sheet_names, list):
+                sheet_names = [sheet_names]
+            file_name = f"{current_date}_{self.hostname}_combined.xlsx"
+            with pd.ExcelWriter(file_name) as writer:
+                for df, sheet in zip(data, sheet_names):
+                    df.to_excel(writer, sheet_name=sheet, index=False)
+        
+        # 엑셀 파일에 스타일 적용 (모든 시트)
+        apply_excel_style(file_name)
+        return file_name
 
     @staticmethod
     def _get_member_texts(xml_elements) -> list:
