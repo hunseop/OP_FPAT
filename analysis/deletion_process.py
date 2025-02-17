@@ -279,7 +279,7 @@ def add_request_info():
     
     rule_df = read_and_process_excel(rule_file)
     info_df = read_and_process_excel(info_file)
-    info_df = info.sort_values(by='REQUEST_END_DATE', ascending=False)
+    info_df = info_df.sort_values(by='REQUEST_END_DATE', ascending=False)
     auto_extension_id = find_auto_extension_id()
     match_and_update_df(rule_df, info_df)
     rule_df.replace({'nan': None}, inplace=True)
