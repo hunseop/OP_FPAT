@@ -140,7 +140,7 @@ def parse_request_type():
             return data_dict
         
         # initial pattern
-        pattern_gsams = re.compile("MASKED")
+        pattern_3 = re.compile("MASKED")
         pattern_1_rulename = re.compile("MASKED")
         pattern_1_user = r'MASKED'
         rulename_1_rulename = r'MASKED'
