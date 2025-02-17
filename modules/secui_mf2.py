@@ -337,7 +337,9 @@ def service_parsing(file_path):
                 data[key] = match.group(1)
         data_list.append(data)
     
-    return de
+    df = pd.DataFrame(data_list)
+
+    return df
 
 def network_parsing(file_path):
     content = remove_newlines_from_file(file_path)
@@ -464,7 +466,7 @@ def export_objects(device_ip, username, password):
     return [address_df, address_group_df, service_df]
 
 def export_security_rules(device_ip, username, password):
-    file = download_rule_file(device_ip, 22, username, password, '/temp/','./')
+    file = download_rule_file(device_ip, 22, username, password, '/secui/etc','./')
     rule_df = rule_parsing(f'{file}')
     delete_files(file)
     return rule_df
