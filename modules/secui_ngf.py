@@ -1,5 +1,5 @@
 import requests
-import pasdas as pd
+import pandas as pd
 import json
 requests.packages.urllib3.disable_warnings()
 
@@ -22,7 +22,7 @@ def login(hostname, ext_clnt_id, ext_clnt_secret):
     response = requests.post(url, headers=headers, data=json.dumps(data), verify=False, timeout=3)
     if response.status_code == 200:
         print("Login Success")
-        return response.json().get("result").get("token")
+        return response.json().get("result").get("api_token")
     else:
         print("Login Failed")
         print(response.status_code)
@@ -38,7 +38,7 @@ def logout(hostname, token):
         'Authorization': str(token)
     }
 
-    response = requests.post(url, headers=headers, verify=False, timeout=3)
+    response = requests.delete(url, headers=headers, verify=False, timeout=3)
     if response.status_code == 200:
         print("Logout Success")
         return True
@@ -195,7 +195,7 @@ def export_security_rules(device_ip, ext_clnt_id, ext_clnt_secret):
         seq = rule.get("seq")
         fw_rule_id = rule.get("fw_rule_id")
         name = rule.get("name")
-        if name == "defualt":
+        if name == "default":
             continue
         use = "Y" if rule.get("use") == 1 else "N"
         action = "allow" if rule.get("action") == 1 else "deny"
@@ -221,7 +221,7 @@ def export_security_rules(device_ip, ext_clnt_id, ext_clnt_secret):
         info = {
             "Seq": seq,
             "Rule Name": fw_rule_id,
-            # "name": name,
+            # "Rule Name": name,
             "Enable": use,
             "Action": action,
             "Source": list_to_string(src_list),
