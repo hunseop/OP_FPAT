@@ -11,7 +11,7 @@ import os
 COLUMNS = [
     'Rule Name', 'Source', 'User', 'Destination', 'Service', 'Application', 'Description',
     'REQUEST_ID', 'REQUEST_START_DATE', 'REQUEST_END_DATE', 'TITLE', 'REQUESTER_ID',
-    'REQUESTER_EMAIL', 'REQUESTER_NAME', 'REQUESTER_DEPT', 'WRITER_PERSON_ID', 'WRITE_PERSON_EMAIL',
+    'REQUESTER_EMAIL', 'REQUESTER_NAME', 'REQUESTER_DEPT', 'WRITE_PERSON_ID', 'WRITE_PERSON_EMAIL',
     'WRITE_PERSON_NAME', 'WRITE_PERSON_DEPT', 'APPROVAL_PERSON_ID', 'APPROVAL_PERSON_EMAIL',
     'APPROVAL_PERSON_NAME', 'APPROVAL_PERSON_DEPT_NAME'
 ]
@@ -23,13 +23,28 @@ COLUMNS_NO_HISTORY = [
 DATE_COLUMNS = ['REQUEST_START_DATE', 'REQUEST_END_DATE']
 
 TRANSLATED_COLUMNS = {
-    'REQUEST_ID': '신청번호',
-    ### skiped
+    'REQUEST_ID': 'GSAMS 신청번호',
+    'REQUEST_START_DATE': '시작일',
+    'REQUEST_END_DATE': '종료일',
+    'TITLE': '제목',
+    'REQUESTER_ID': '신청자 ID',
+    'REQUESTER_EMAIL': '신청자 이메일',
+    'REQUESTER_NAME': '신청자명',
+    'REQUEST_DEPT': '신청자 부서',
+    'WRITE_PERSON_ID': '기안자 ID',
+    'WRITE_PERSON_EMAIL': '기안자 이메일',
+    'WRITE_PERSON_NAME': '기안자명',
+    'WRITE_PERSON_DEPT': '기안자 부서',
+    'APPROVAL_PERSON_ID': '결재자 ID',
+    'APPROVAL_PERSON_EMAIL': '결재자 이메일',
+    'APPROVAL_PERSON_NAME': '결재자명',
+    'APPROVAL_PERSON_DEPT': '결재자 부서',
 }
 
 except_list = [
-    'test',
-    'sample',
+    '1',
+    '2',
+    '3',
 ]
 
 def update_version(filename: str, final_version: bool = False) -> str:
@@ -125,7 +140,7 @@ def parse_request_type():
             return data_dict
         
         # initial pattern
-        pattern_3 = re.compile("MASKED")
+        pattern_gsams = re.compile("MASKED")
         pattern_1_rulename = re.compile("MASKED")
         pattern_1_user = r'MASKED'
         rulename_1_rulename = r'MASKED'
@@ -135,7 +150,7 @@ def parse_request_type():
         match_3 = pattern_3.match(description)
         name_match = pattern_1_rulename.match(str(rulename))
         user_match = re.search(pattern_1_user, description)
-        desc_match = re.search(rulename_1, description)
+        desc_match = re.search(rulename_1_rulename, description)
         date_match = re.search(rulename_1_date, description)
 
         if match_3:
@@ -214,7 +229,7 @@ def extract_request_id():
     # 각 Request Type별로 Request ID 값만 추출하여 중복 제거 후 Excel의 각 시트로 저장
     with pd.ExcelWriter(f"request_id_{file_name}") as writer:
         for request_type, group in selected_data.groupby('Request Type'):
-            group[['Request ID']].drop_duplicates().to_excel(wirter, sheet_name=request_type, index=False)
+            group[['Request ID']].drop_duplicates().to_excel(writer, sheet_name=request_type, index=False)
 
 # 3. add request info
 def add_request_info():
@@ -233,7 +248,7 @@ def add_request_info():
                 matched_row = info_df[
                     ((info_df['REQUEST_ID'] == row['Request ID']) & (info_df['MIS_ID'] == row['MIS ID'])) |
                     ((info_df['REQUEST_ID'] == row['Request ID']) & (info_df['REQUEST_END_DATE'] == row['End Date']) & (info_df['WRITE_PERSON_ID'] == row['Request User'])) |
-                    ((info_df['REQUEST_ID'] == row['Reqeust ID']) & (info_df['REQUEST_END_DATE'] == row['End Date']) & (info_df['REQUESTER_ID'] == row['Request User']))
+                    ((info_df['REQUEST_ID'] == row['Request ID']) & (info_df['REQUEST_END_DATE'] == row['End Date']) & (info_df['REQUESTER_ID'] == row['Request User']))
                 ]
             else:
                 matched_row = info_df[info_df['REQUEST_ID'] == row['Request ID']]
@@ -244,7 +259,7 @@ def add_request_info():
                         rule_df.at[idx, col] = pd.to_datetime(matched_row[col].values[0], errors='coerce')
                     else:
                         rule_df.at[idx, col] = matched_row[col].values[0]
-            elif row['Request Type'] != 'nan' and row['Reuqest Type'] != 'Unknown':
+            elif row['Request Type'] != 'nan' and row['Request Type'] != 'Unknown':
                 rule_df.at[idx, 'REQUEST_ID'] = row['Request ID']
                 rule_df.at[idx, 'REQUEST_START_DATE'] = row['Start Date']
                 rule_df.at[idx, 'REQUEST_END_DATE'] = row['End Date']
@@ -302,7 +317,7 @@ def paloalto_exception():
     df.log[df.index < deny_std_rule_index, '예외'] = '인프라정책'
 
     # 5.
-    df.log[df['Rule Name'].str.startswith(('sample_', 'test_')), '예외'] = 'test_group_정책'
+    df.loc[df['Rule Name'].str.startswith(('sample_', 'test_')), '예외'] = 'test_group_정책'
 
     # 6.
     df.loc[df['Enable'] == 'N', '예외'] = '비활성화정책'
@@ -368,7 +383,7 @@ def secui_exception():
     df.loc[df['REQUEST_STATUS'] == 99, '예외'] = '자동연장정책'
 
     # 4.
-    dney_str_rule_index = df[df['Description'].str.contains('deny_rule') == True].index[0]
+    deny_std_rule_index = df[df['Description'].str.contains('deny_rule') == True].index[0]
     df.log[df.index < deny_std_rule_index, '예외'] = '인프라정책'
 
     # 5.
@@ -411,6 +426,7 @@ def secui_exception():
     df = df[cols]
 
     cols.insert(cols.index('만료여부') + 1, '미사용여부')
+    df = df.reindex(columns=cols)
     df['미사용여부'] = ''
 
     df.to_excel(update_version(rule_file, True), index=False, engine='openpyxl')
@@ -424,8 +440,8 @@ def find_auto_extension_id():
     return filtered_df
 
 def organize_redundant_file():
-    expected_columns = ['No', 'Type', 'Seq', 'Rule Name', 'Enable', 'Action', 'Source', 'User', 'Destination', 'Service', 'Application', 'Security Profile', 'Description', 'Request Type', 'Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date']
-    expected_columns_2 = ['No', 'Type', 'Vsys', 'Seq', 'Rule Name', 'Enable', 'Action', 'Source', 'User', 'Destination', 'Service', 'Application', 'Security Profile', 'Description', 'Request Type', 'Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date']
+    expected_columns = ['No', 'Type', 'Seq', 'Rule Name', 'Enable', 'Action', 'Source', 'User', 'Destination', 'Service', 'Application', 'Security Profile', 'Category', 'Description', 'Request Type', 'Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date']
+    expected_columns_2 = ['No', 'Type', 'Vsys', 'Seq', 'Rule Name', 'Enable', 'Action', 'Source', 'User', 'Destination', 'Service', 'Application', 'Security Profile', 'Category', 'Description', 'Request Type', 'Request ID', 'Ruleset ID', 'MIS ID', 'Request User', 'Start Date', 'End Date']
 
     try:
         print('중복정책 파일을 선택')
@@ -470,7 +486,7 @@ def organize_redundant_file():
     extensioned_df = df.groupby('No').filter(lambda x: x['자동연장'].any())
     extensioned_group = extensioned_df[extensioned_df['Request Type'] == 'GROUP']
     exception_target = extensioned_group.groupby('No').filter(lambda x: len(x['Request ID'].unique()) >=2 )
-    exception_id = exception_target[(exception_target['자동연장'] == True) & (exception_target['작업구분'] == 'tkrwp')]['No']
+    exception_id = exception_target[(exception_target['자동연장'] == True) & (exception_target['작업구분'] == '삭제')]['No']
 
     df = df[~df['No'].isin(exception_id)]
 
@@ -487,6 +503,11 @@ def organize_redundant_file():
     )['No'].unique()
 
     df = df[~df['No'].isin(filtered_no_2)]
+
+    target_types = ["PAM", "SERVER", "Unknown"]
+    target_nos = df[df['Request Type'].isin(target_types)]['No'].drop_duplicates()
+    
+    df = df[~df['No'].isin(target_nos)]
 
     notice_df = df[df['공지여부'] == True]
     delete_df = df[df['공지여부'] == False]
@@ -523,7 +544,7 @@ def add_mis_id():
 
     rule_df.to_excel(update_version(file, False), index=False, engine='openpyxl')
 
-def notice_file_organizeation():
+def notice_file_organization():
     def expired_used(df, selected_file):
         filtered_df = df[
             ((df['예외'].isna()) | (df['예외'] == '신규정책')) &
@@ -605,24 +626,20 @@ def notice_file_organizeation():
             (df['미사용여부'] == '미사용')
         ]
 
-        selected_df = filtered_df[COLUMNS]
+        selected_df = filtered_df[COLUMNS_NO_HISTORY]
         selected_df = selected_df.astype(str)
 
-        for date_column in DATE_COLUMNS:
-            selected_df[date_column] = pd.to_datetime(selected_df[date_column]).dt.strftime('%Y-%m-%d')
-        
-        selected_df.rename(TRANSLATED_COLUMNS, inplace=True)
         selected_df.fillna('', inplace=True)
         selected_df.replace('nan', '', inplace=True)
 
-        type = '이력없는_미사용정책'
+        type = '이력없음_미사용정책'
         filename = str(remove_extension(selected_file)) + '_이력없는_미사용정책.xlsx'
         selected_df.to_excel(filename, index=False, na_rep='', sheet_name=type)
         save_to_excel(selected_df, type, filename)
 
     print("분류할 정책파일을 선택하세요.")
     selected_file = select_xlsx_files()
-    logging.ingo("정책 분류 시작")
+    logging.info("정책 분류 시작")
     try:
         df = pd.read_excel(selected_file)
         try:
@@ -644,7 +661,7 @@ def notice_file_organizeation():
             no_history_unused(df, selected_file)
             logging.info("이력없는 미사용 분류 완료")
         except:
-            logging.error("이력없는 미사용 실패")
+            logging.error("이력없는 미사용 분류 실패")
         logging.info("정책 분류 완료")
     except:
         logging.error("정책 분류 실패")
@@ -737,7 +754,7 @@ def deletion_process_main():
         elif start_task <= 6:
             organize_redundant_file()
         elif start_task <= 7:
-            notice_file_organizeation()
+            notice_file_organization()
         elif start_task <= 8:
             add_mis_id()
         else:
