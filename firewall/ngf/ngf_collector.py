@@ -19,40 +19,29 @@ class NGFCollector(FirewallInterface):
     def export_network_objects(self) -> pd.DataFrame:
         """네트워크 객체 정보를 PaloAlto 형식으로 변환하여 반환합니다."""
         # 호스트 객체
-        host_objects = self.client.get_host_objects()
-        if host_objects and 'result' in host_objects:
-            host_df = pd.DataFrame(host_objects['result'])
-            if not host_df.empty:
-                host_df = host_df[['name', 'ip']].rename(columns={'name': 'Name', 'ip': 'Value'})
-                host_df['Type'] = 'ip-netmask'
-            else:
-                host_df = pd.DataFrame(columns=['Name', 'Type', 'Value'])
+        host_df = self.client.export_objects('host')
+        if not host_df.empty:
+            host_df = host_df[['name', 'ip_list']].rename(coulmns={'name': 'Name', 'ip_list': 'Value'})
+            host_df['Type'] = 'ip-netmask'
         else:
             host_df = pd.DataFrame(columns=['Name', 'Type', 'Value'])
 
         # 네트워크 객체
-        network_objects = self.client.get_network_objects()
-        if network_objects and 'result' in network_objects:
-            network_df = pd.DataFrame(network_objects['result'])
-            if not network_df.empty:
-                network_df['Value'] = network_df.apply(lambda x: f"{x['ip']}/{x['mask']}", axis=1)
-                network_df = network_df[['name', 'Value']].rename(columns={'name': 'Name'})
-                network_df['Type'] = 'ip-netmask'
-            else:
-                network_df = pd.DataFrame(columns=['Name', 'Type', 'Value'])
+        network_df = self.client.export_objects('network')
+        if not network_df.empty:
+            network_df['Value'] = network_df.apply(
+                lambda row: f"{row['ip_list_ip_info1']}-{row['ip_list_ip_info2']}" if '.' in row['ip_list_ip_info1'] else f"{row['ip_list_ip_info2']}/{row['ip_list_ip_info2']}",
+                axis=1
+            )
+            network_df['Type'] = network_df['Value'].apply(lambda x: 'ip-netmask' if '/' in x else 'ip-range')
         else:
             network_df = pd.DataFrame(columns=['Name', 'Type', 'Value'])
 
         # 도메인 객체
-        domain_objects = self.client.get_domain_objects()
-        if domain_objects and 'result' in domain_objects:
-            domain_df = pd.DataFrame(domain_objects['result'])
-            if not domain_df.empty:
-                domain_df = domain_df[['name']].rename(columns={'name': 'Name'})
-                domain_df['Type'] = 'fqdn'
-                domain_df['Value'] = domain_df['Name']
-            else:
-                domain_df = pd.DataFrame(columns=['Name', 'Type', 'Value'])
+        domain_df = self.client.export_objects('domain')
+        if not domain_df.empty:
+            domain_df = domain_df[['name', 'dmn_name']].rename(coulmns={'name': 'Name', 'dmn_name': 'Value'})
+            domain_df['Type'] = 'fqdn'
         else:
             domain_df = pd.DataFrame(columns=['Name', 'Type', 'Value'])
 
@@ -60,6 +49,7 @@ class NGFCollector(FirewallInterface):
         result_df = pd.concat([host_df, network_df, domain_df], ignore_index=True)
         return result_df
 
+    ## 아래부터 수정 필요
     def export_network_group_objects(self) -> pd.DataFrame:
         """네트워크 그룹 객체 정보를 PaloAlto 형식으로 변환하여 반환합니다."""
         group_objects = self.client.get_group_objects()

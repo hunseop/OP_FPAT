@@ -4,6 +4,10 @@ import logging
 import paramiko
 from scp import SCPClient
 import pandas as pd
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+
+# Paramiko의 로그 레벨을 WARNING 이상으로 설정 (INFO 로그 제거)
 
 # 명령어 상수
 POLICY_DIRECTORY = 'ls -ls *.fwrules'
@@ -159,30 +163,29 @@ def download_rule_file(host: str, port: int, username: str, password: str,
 
 
 def download_object_files(host: str, port: int, username: str, password: str,
-                          remote_directory: str, local_directory: str) -> list:
+                          remote_directory: str, local_directory: str, conf_types: list = None) -> list:
     """
     원격 장비에서 지정된 conf 파일들을 다운로드한 후, 다운로드된 파일명 리스트를 반환합니다.
     """
+    if conf_types is None:
+        conf_types = ['groupobject.conf', 'hostobject.conf', 'networkobject.conf', 'serviceobject.conf']
+    
     downloaded_files = []
     ssh = create_ssh_client(host, port, username, password)
     try:
         _, stdout, _ = exec_remote_command(ssh, CONF_DIRECTORY, remote_directory)
         conf_lines = stdout.readlines()
-        specified_conf_files = [
-            'groupobject.conf',
-            'hostobject.conf',
-            'networkobject.conf',
-            'serviceobject.conf',
-        ]
         with SCPClient(ssh.get_transport()) as scp:
             for line in conf_lines:
                 conf_file = line.strip()
-                if conf_file in specified_conf_files:
-                    remote_path = os.path.join(remote_directory, conf_file)
+                if conf_file in conf_types:
+                    # 다운로드할 로컬 파일 경로 지정
                     download_name = f"{host}_{conf_file}"
                     local_path = os.path.join(local_directory, download_name)
-                    scp.get(remote_path, local_path)
-                    downloaded_files.append(download_name)
+                    # 이미 파일이 있으면 다운로드하지 않음
+                    if not os.path.exists(local_path):
+                        scp.get(os.path.join(remote_directory, conf_file), local_path)
+                    downloaded_files.append(local_path)
     except Exception as e:
         logging.error("download_object_files error: %s", e)
     finally:
@@ -190,11 +193,11 @@ def download_object_files(host: str, port: int, username: str, password: str,
         return downloaded_files
 
 
-def show_system_info(host: str, port: int, username: str, password: str) -> pd.DataFrame:
+def show_system_info(host: str, username: str, password: str) -> pd.DataFrame:
     """
     원격 장비의 시스템 정보를 수집하여 DataFrame으로 반환합니다.
     """
-    ssh = create_ssh_client(host, port, username, password)
+    ssh = create_ssh_client(host, username, password)
     try:
         # hostname
         _, stdout, _ = ssh.exec_command('hostname')
@@ -588,6 +591,35 @@ def export_security_rules(device_ip: str, username: str, password: str) -> pd.Da
 
 
 # ────────────── SAVE TO EXCEL FUNCTION ──────────────
+def apply_excel_style(file_name: str) -> None:
+    """
+    모든 시트에 대해 헤더에 연한 회색 배경을 적용하고,
+    헤더의 너비를 자동 조절하되 최대 너비를 40으로 제한합니다.
+    
+    :param file_name: 처리할 엑셀 파일 이름
+    """
+    try:
+        workbook = load_workbook(file_name)
+        header_fill = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')
+
+        # 모든 워크시트를 순회하며 스타일 적용
+        for worksheet in workbook.worksheets:
+            header_row = worksheet[1]
+            for cell in header_row:
+                cell.fill = header_fill
+                column_letter = cell.column_letter
+                max_length = 0
+                for col_cell in worksheet[column_letter]:
+                    if col_cell.value is not None:
+                        cell_length = len(str(col_cell.value))
+                        if cell_length > max_length:
+                            max_length = cell_length
+                adjusted_width = (max_length + 2) * 1.2
+                worksheet.column_dimensions[column_letter].width = min(40, adjusted_width)
+
+        workbook.save(file_name)
+    except Exception as error:
+        logging.error("엑셀 스타일 적용 중 오류 발생: %s", error)
 
 def save_dfs_to_excel(dfs, sheet_names, file_name: str) -> bool:
     """

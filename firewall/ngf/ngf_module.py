@@ -116,6 +116,29 @@ class NGFClient:
             logging.error("Exception during GET %s: %s", endpoint, e)
             return None
 
+    def _post_service_group_objects(self, endpoint: str, service_group_name: str) -> dict:
+        """
+        서비스 그룹 객체를 단독으로 추출하기 위한 POST 요청 수행.
+        """
+        url = f"https://{self.hostname}{endpoint}"
+        try:
+            response = requests.post(
+                url,
+                headers=self._get_headers(token=self.token),
+                verify=False,
+                timeout=self.timeout,
+                json={'name': service_group_name}
+            )
+            if response.status_code == 200:
+                logging.info("GET %s Success", endpoint)
+                return response.json()
+            else:
+                logging.error("GET %s Failed, status code: %s", endpoint, response.status_code)
+                return None
+        except Exception as e:
+            logging.error("Exception during GET %s: %s", endpoint, e)
+            return None
+
     def get_fw4_rules(self) -> dict:
         """
         FW4 규칙 데이터를 조회합니다.
@@ -157,6 +180,12 @@ class NGFClient:
         서비스 그룹 객체 데이터를 조회합니다.
         """
         return self._get("/api/op/service-group/objects")
+    
+    def get_service_group_objects_information(self, service_group_name) -> dict:
+        """
+        단일 서비스 그룹 객체의 데이터를 조회합니다.
+        """
+        return self._post_service_group_objects("/api/op/service-group/get/objects", service_group_name)
 
     @staticmethod
     def list_to_string(list_data) -> str:
@@ -167,22 +196,15 @@ class NGFClient:
             return ','.join(str(s) for s in list_data)
         return list_data
 
-    def download_ngf_rules(self) -> dict:
+    def export_security_rules(self) -> pd.DataFrame:
         """
-        NGF 규칙 데이터를 로그인 후 조회하고 로그아웃하여 반환합니다.
+        NGF 규칙 데이터를 파싱하여 pandas DataFrame으로 반환합니다.
         """
         token = self.login()
         if token:
             rules_data = self.get_fw4_rules()
             self.logout()
-            return rules_data
-        return None
-
-    def export_security_rules(self) -> pd.DataFrame:
-        """
-        NGF 규칙 데이터를 파싱하여 pandas DataFrame으로 반환합니다.
-        """
-        rules_data = self.download_ngf_rules()
+        
         if not rules_data:
             logging.error("No rules data available")
             return pd.DataFrame()
@@ -249,6 +271,104 @@ class NGFClient:
 
         return pd.DataFrame(security_rules)
 
+    def export_objects(self, object_type: str) -> pd.DataFrame:
+        """
+        NGF 객체 데이터를 파싱하여 pandas DataFrame으로 반환합니다.
+
+        내부적으로 로그인 후 조회하고, 로그아웃을 처리합니다.
+        object_type 파라미터가 반드시 지정되어야 하며, 허용되는 값은
+        "host", 'network", "domain", "group", "service", "service_group" 입니다.
+
+        API 응답의 "result" 데이터를 사용하며, pd.json_normalize()를 이용해 중첩 딕셔너리를 평탄화하고,
+        각 컬럼의 값이 리스트인 경우 쉼표(,)로 조인, 딕셔너인 경우에는 딕셔너리의 value들의 쉼표로 연결합니다.
+
+        Parameters:
+            object_type (str): 조회할 객체 타입. 예: "host", "network", "domain",
+                                                "group", "service", "service_group"
+
+        Returns:
+            pd.DataFrame: 조회된 객체 데이터가 포함된 DataFrame. 데이터가 없으면 빈 DataFrame 반환.
+        """
+        # object_type 파라미터는 반드시 지정되어야 합니다.
+        if not object_type:
+            logging.error("object_type 파라미터를 지정해야 합니다.")
+            return pd.DataFrame()
+        
+        token = self.login()
+        if not token:
+            logging.error("로그인 실패")
+            return pd.DataFrame()
+        
+        # 객체 타입에 따른 API 호출 함수 매핑
+        type_to_getter = {
+            "host": self.get_host_objects,
+            "network": self.get_network_objects,
+            "domain": self.get_domain_objects,
+            "group": self.get_group_objects,
+            "service": self.get_service_objects,
+            "service_group": self.get_service_group_objects,
+        }
+
+        getter = type_to_getter.get(object_type)
+        if not getter:
+            logging.error("유효하지 않은 객체 타입: %s", object_type)
+            self.logout()
+            return pd.DataFrame
+        
+        data = getter()
+        self.logout()
+
+        if not data:
+            logging.error("데이터를 가져올 수 없습니다: %s", object_type)
+            return pd.DataFrame()
+        
+        results = data.get("result", [])
+        if not results:
+            logging.error("결과 데이터가 없습니다: %s", object_type)
+            return pd.DataFrame()
+        
+        # pd.json_normalize()를 사용해 중첩 딕셔너리를 평탄화합니다.
+        df = pd.json_normalize(results, sep='_')
+
+        # 각 컬럼의 값에 대해:
+        # - 리스트인 경우: 쉼표로 조인하여 문자열로 변환
+        # - 딕셔너리인 경우: 딕셔너리의 value들을 쉼표로 연결하여 문자열로 변환
+        for col in df.columns:
+            df[col] = df[col].apply(lambda x: self.list_to_string(x)
+                                    if isinstance(x, list)
+                                    else (','.join(map(str, x.values()))
+                                            if isinstance(x, dict) else x))
+
+        return df
+        '''
+        서비스그룹객체를 그냥 조회하면 멤버가 조회되지 않는다.
+        서비스그룹명을 리스트에 넣어 아래 메소드를 이용하여 매핑시켜야 함. 최악임.
+        '''
+    def export_service_group_objects_info(self, service_group_name: str) -> pd.DataFrame:
+        """
+        단일 서비스 그룹 객체를 파싱하여 pandas DataFrame으로 반환합니다.
+        """
+        token = self.login()
+        if token:
+            object_data = self.get_service_objects_information(service_group_name)
+            self.logout()
+        
+        if not object_data:
+            logging.error("No rules data available")
+            return pd.DataFrame()
+        
+        result_data = object_data.get('result', [])
+        
+        # pd.json_normalize()를 사용해 중첩 딕셔너리를 평탄화합니다.
+        df = pd.json_normalize(results, sep='_')
+        
+        for col in df.columns:
+            df[col] = df[col].apply(lambda x: self.list_to_string(x)
+                                    if isinstance(x, list)
+                                    else (','.join(map(str, x.values()))
+                                            if isinstance(x, dict) else x))
+
+        return df
 
 # ────────────── 모듈 테스트 예시 ──────────────
 if __name__ == '__main__':
