@@ -5,49 +5,76 @@
     <div class="page-header">
         <h2>방화벽 관리</h2>
         <div class="header-actions">
+            <button class="btn btn-outline" id="uploadBtn">엑셀 일괄등록</button>
             <button class="btn btn-primary" id="addFirewallBtn">방화벽 등록</button>
         </div>
     </div>
 
-    <div class="firewall-grid">
-        <!-- 등록된 방화벽 카드들 -->
-        <div class="firewall-card">
-            <div class="card-header">
-                <h3>NGF 방화벽</h3>
-                <span class="status active">활성</span>
-            </div>
-            <div class="card-content">
-                <div class="info-item">
-                    <span class="label">IP 주소</span>
-                    <span class="value">192.168.1.1</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">마지막 동기화</span>
-                    <span class="value">2024.03.15 14:30</span>
-                </div>
-                <div class="info-item">
-                    <span class="label">정책 수</span>
-                    <span class="value">1,650</span>
-                </div>
-            </div>
-            <div class="card-actions">
-                <button class="btn btn-outline">동기화</button>
-                <button class="btn btn-outline">수정</button>
-                <button class="btn btn-outline danger">삭제</button>
-            </div>
+    <!-- 검색 및 필터 바 추가 -->
+    <div class="filter-bar">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="방화벽 이름 또는 IP 주소로 검색...">
         </div>
+        <div class="filter-actions">
+            <select id="typeFilter">
+                <option value="">모든 종류</option>
+                <option value="ngf">NGF</option>
+                <option value="mf2">MF2</option>
+                <option value="paloalto">PALOALTO</option>
+            </select>
+            <select id="sortField" style="display: none;">
+                <option value="name">이름</option>
+                <option value="type">종류</option>
+                <option value="ip_address">IP 주소</option>
+                <option value="last_sync">마지막 동기화</option>
+                <option value="policy_count">정책 수</option>
+            </select>
+            <select id="sortOrder" style="display: none;">
+                <option value="asc">오름차순</option>
+                <option value="desc">내림차순</option>
+            </select>
+        </div>
+    </div>
 
-        <!-- 새 방화벽 추가 카드 -->
-        <div class="firewall-card add-card">
-            <div class="add-content">
-                <span class="add-icon">+</span>
-                <span class="add-text">새 방화벽 등록</span>
-            </div>
-        </div>
+    <div class="firewall-list">
+        <table class="firewall-table">
+            <thead>
+                <tr>
+                    <th data-sort="name">이름 <span class="sort-icon">↕</span></th>
+                    <th data-sort="type">종류 <span class="sort-icon">↕</span></th>
+                    <th data-sort="ip_address">IP 주소 <span class="sort-icon">↕</span></th>
+                    <th>상태</th>
+                    <th data-sort="last_sync">마지막 동기화 <span class="sort-icon">↕</span></th>
+                    <th data-sort="policy_count">정책 수 <span class="sort-icon">↕</span></th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody id="firewallTableBody">
+                {% for firewall in firewalls %}
+                <tr>
+                    <td>{{ firewall.name }}</td>
+                    <td>{{ firewall.type_display }}</td>
+                    <td>{{ firewall.ip_address }}</td>
+                    <td>
+                        <span class="status {% if firewall.status %}active{% endif %}">
+                            {{ '활성' if firewall.status else '비활성' }}
+                        </span>
+                    </td>
+                    <td>{{ firewall.last_sync.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ firewall.policy_count }}</td>
+                    <td>
+                        <button class="btn btn-outline btn-sm sync-btn" data-id="{{ firewall.id }}">동기화</button>
+                        <button class="btn btn-outline btn-sm edit-btn" data-id="{{ firewall.id }}">수정</button>
+                        <button class="btn btn-outline btn-sm danger delete-btn" data-id="{{ firewall.id }}">삭제</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
-<!-- 방화벽 등록 모달 -->
+<!-- 방화벽 등록/수정 모달 -->
 <div class="modal" id="firewallModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -65,6 +92,7 @@
                     <select id="type" name="type" required>
                         <option value="ngf">NGF</option>
                         <option value="mf2">MF2</option>
+                        <option value="paloalto">PALOALTO</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -72,16 +100,39 @@
                     <input type="text" id="ip" name="ip" required>
                 </div>
                 <div class="form-group">
-                    <label for="client_id">Client ID</label>
-                    <input type="text" id="client_id" name="client_id" required>
+                    <label for="username">사용자 이름</label>
+                    <input type="text" id="username" name="username" required>
                 </div>
                 <div class="form-group">
-                    <label for="client_secret">Client Secret</label>
-                    <input type="password" id="client_secret" name="client_secret" required>
+                    <label for="password">비밀번호</label>
+                    <input type="password" id="password" name="password" required>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-outline" id="cancelBtn">취소</button>
                     <button type="submit" class="btn btn-primary">등록</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 엑셀 업로드 모달 추가 -->
+<div class="modal" id="uploadModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>방화벽 일괄 등록</h3>
+            <button class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file">엑셀 파일 선택</label>
+                    <input type="file" id="file" name="file" accept=".xlsx" required>
+                </div>
+                <div class="form-actions">
+                    <a href="{{ url_for('download_template') }}" class="btn btn-outline">템플릿 다운로드</a>
+                    <button type="button" class="btn btn-outline" id="cancelUploadBtn">취소</button>
+                    <button type="submit" class="btn btn-primary">업로드</button>
                 </div>
             </form>
         </div>
