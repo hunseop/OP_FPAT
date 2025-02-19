@@ -5,19 +5,19 @@
     <!-- 상단 통계 카드 -->
     <div class="stats-grid">
         <div class="stat-card">
+            <div class="stat-header">전체 방화벽</div>
+            <div class="stat-value">{{ firewall_count }}</div>
+            <div class="stat-change">등록된 방화벽</div>
+        </div>
+        <div class="stat-card">
             <div class="stat-header">전체 정책</div>
-            <div class="stat-value">1,650</div>
-            <div class="stat-change increase">+3.2%</div>
+            <div class="stat-value">{{ policy_count }}</div>
+            <div class="stat-change">수집된 정책</div>
         </div>
         <div class="stat-card">
-            <div class="stat-header">활성 정책</div>
-            <div class="stat-value">1,405</div>
-            <div class="stat-change increase">+5.2%</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-header">미사용 정책</div>
-            <div class="stat-value">245</div>
-            <div class="stat-change decrease">-2.4%</div>
+            <div class="stat-header">전체 객체</div>
+            <div class="stat-value">{{ object_count }}</div>
+            <div class="stat-change">수집된 객체</div>
         </div>
     </div>
 
@@ -26,25 +26,25 @@
         <div class="section-card">
             <div class="card-header">
                 <h3>정책 분석</h3>
-                <span class="period">2024 Q1</span>
+                <span class="period">현재</span>
             </div>
             <div class="progress-list">
                 <div class="progress-item">
                     <div class="progress-info">
                         <span>활성 정책</span>
-                        <span>85%</span>
+                        <span>{{ "%.1f"|format(active_policy_count/policy_count*100 if policy_count else 0) }}%</span>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress" style="width: 85%"></div>
+                        <div class="progress" style="width: {{ "%.1f"|format(active_policy_count/policy_count*100 if policy_count else 0) }}%"></div>
                     </div>
                 </div>
                 <div class="progress-item">
                     <div class="progress-info">
-                        <span>미사용 정책</span>
-                        <span>15%</span>
+                        <span>비활성 정책</span>
+                        <span>{{ "%.1f"|format(inactive_policy_count/policy_count*100 if policy_count else 0) }}%</span>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress" style="width: 15%"></div>
+                        <div class="progress" style="width: {{ "%.1f"|format(inactive_policy_count/policy_count*100 if policy_count else 0) }}%"></div>
                     </div>
                 </div>
             </div>
@@ -56,12 +56,12 @@
             </div>
             <div class="metrics-list">
                 <div class="metric-item">
-                    <span class="metric-label">정책 업데이트</span>
-                    <span class="metric-value">최근 7일</span>
+                    <span class="metric-label">활성 정책</span>
+                    <span class="metric-value">{{ active_policy_count }}개</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">마지막 분석</span>
-                    <span class="metric-value">2024.03.15</span>
+                    <span class="metric-label">비활성 정책</span>
+                    <span class="metric-value">{{ inactive_policy_count }}개</span>
                 </div>
             </div>
         </div>

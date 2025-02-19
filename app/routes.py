@@ -23,7 +23,30 @@ def allowed_file(filename):
 
 @app.route('/')
 def index():
-    return render_template('index.html', title='FPAT')
+    # 방화벽 개수
+    firewall_count = Firewall.query.count()
+    
+    # 전체 정책 수
+    policy_count = SecurityRule.query.count()
+    
+    # 활성화된 정책 수
+    active_policy_count = SecurityRule.query.filter_by(enabled=True).count()
+    
+    # 전체 객체 수 (네트워크 객체 + 네트워크 그룹 + 서비스 객체 + 서비스 그룹)
+    object_count = (
+        NetworkObject.query.count() +
+        NetworkGroup.query.count() +
+        ServiceObject.query.count() +
+        ServiceGroup.query.count()
+    )
+    
+    return render_template('index.html', 
+                         title='FPAT',
+                         firewall_count=firewall_count,
+                         policy_count=policy_count,
+                         active_policy_count=active_policy_count,
+                         inactive_policy_count=policy_count - active_policy_count,
+                         object_count=object_count)
 
 @app.route('/policy')
 def policy():
