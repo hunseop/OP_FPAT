@@ -360,7 +360,7 @@ class NGFClient:
         result_data = object_data.get('result', [])
         
         # pd.json_normalize()를 사용해 중첩 딕셔너리를 평탄화합니다.
-        df = pd.json_normalize(results, sep='_')
+        df = pd.json_normalize(result_data, sep='_')
         
         for col in df.columns:
             df[col] = df[col].apply(lambda x: self.list_to_string(x)
