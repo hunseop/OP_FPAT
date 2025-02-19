@@ -1,16 +1,22 @@
 from flask import render_template, request, jsonify, redirect, url_for, send_file
 from app import app, db
-from app.models import Firewall
+from app.models import Firewall, SecurityRule, NetworkObject, NetworkGroup, ServiceObject, ServiceGroup
 from app.utils.validators import validate_firewall_data
 from datetime import datetime
 import os
 import pandas as pd
 from werkzeug.utils import secure_filename
+from celery import Celery
 
 UPLOAD_FOLDER = 'app/static/uploads'
 ALLOWED_EXTENSIONS = {'xlsx'}
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Celery 설정
+celery = Celery('fpat',
+                broker='redis://localhost:6379/0',
+                backend='redis://localhost:6379/0')
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -90,16 +96,227 @@ def delete_firewall(id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@celery.task(bind=True)
+def sync_firewall_task(self, firewall_id):
+    try:
+        firewall = Firewall.query.get(firewall_id)
+        if not firewall:
+            return {'success': False, 'error': '방화벽을 찾을 수 없습니다.'}
+
+        # 현재 진행률 업데이트
+        self.update_state(state='PROGRESS', meta={'progress': 0})
+
+        # 방화벽 타입에 따른 Collector 생성
+        if firewall.type == 'ngf':
+            from firewall.ngf.ngf_collector import NGFCollector
+            collector = NGFCollector(
+                hostname=firewall.ip_address,
+                ext_clnt_id=firewall.username,
+                ext_clnt_secret=firewall.password
+            )
+        elif firewall.type == 'mf2':
+            from firewall.mf2.mf2_collector import MF2Collector
+            collector = MF2Collector(
+                device_ip=firewall.ip_address,
+                username=firewall.username,
+                password=firewall.password
+            )
+        elif firewall.type == 'paloalto':
+            from firewall.paloalto.paloalto_collector import PaloAltoCollector
+            collector = PaloAltoCollector(
+                hostname=firewall.ip_address,
+                username=firewall.username,
+                password=firewall.password
+            )
+        else:
+            raise NotImplementedError(f"지원하지 않는 방화벽 타입입니다: {firewall.type}")
+
+        # 진행률 20% 업데이트
+        self.update_state(state='PROGRESS', meta={'progress': 20})
+
+        # 데이터 수집
+        rules_df = collector.export_security_rules()
+        self.update_state(state='PROGRESS', meta={'progress': 40})
+        
+        network_df = collector.export_network_objects()
+        self.update_state(state='PROGRESS', meta={'progress': 60})
+        
+        group_df = collector.export_network_group_objects()
+        service_df = collector.export_service_objects()
+        service_group_df = collector.export_service_group_objects()
+        
+        # 진행률 80% 업데이트
+        self.update_state(state='PROGRESS', meta={'progress': 80})
+
+        # 기존 데이터 삭제 및 새 데이터 추가
+        with app.app_context():
+            SecurityRule.query.filter_by(firewall_id=firewall.id).delete()
+            NetworkObject.query.filter_by(firewall_id=firewall.id).delete()
+            NetworkGroup.query.filter_by(firewall_id=firewall.id).delete()
+            ServiceObject.query.filter_by(firewall_id=firewall.id).delete()
+            ServiceGroup.query.filter_by(firewall_id=firewall.id).delete()
+
+            # 보안 규칙 추가
+            if not rules_df.empty:
+                for _, row in rules_df.iterrows():
+                    rule = SecurityRule(
+                        firewall_id=firewall.id,
+                        seq=row.get('Seq'),
+                        name=row.get('Rule Name'),
+                        enabled=row.get('Enable'),
+                        action=row.get('Action'),
+                        source=row.get('Source'),
+                        user=row.get('User'),
+                        destination=row.get('Destination'),
+                        service=row.get('Service'),
+                        application=row.get('Application'),
+                        description=row.get('Description'),
+                        last_hit=row.get('Last Hit Date') if pd.notna(row.get('Last Hit Date')) else None
+                    )
+                    db.session.add(rule)
+            
+            # 네트워크 객체 추가
+            if not network_df.empty:
+                for _, row in network_df.iterrows():
+                    obj = NetworkObject(
+                        firewall_id=firewall.id,
+                        name=row['Name'],
+                        type=row.get('Type'),
+                        value=row['Value']
+                    )
+                    db.session.add(obj)
+            
+            # 네트워크 그룹 추가
+            if not group_df.empty:
+                for _, row in group_df.iterrows():
+                    group = NetworkGroup(
+                        firewall_id=firewall.id,
+                        name=row['Group Name'],
+                        members=row.get('Entry')
+                    )
+                    db.session.add(group)
+            
+            # 서비스 객체 추가
+            if not service_df.empty:
+                for _, row in service_df.iterrows():
+                    obj = ServiceObject(
+                        firewall_id=firewall.id,
+                        name=row['Name'],
+                        protocol=row.get('Protocol'),
+                        port=row.get('Port')
+                    )
+                    db.session.add(obj)
+            
+            # 서비스 그룹 추가
+            if not service_group_df.empty:
+                for _, row in service_group_df.iterrows():
+                    group = ServiceGroup(
+                        firewall_id=firewall.id,
+                        name=row['Group Name'],
+                        members=row.get('Entry')
+                    )
+                    db.session.add(group)
+
+            firewall.sync_status = 'success'
+            firewall.last_sync = datetime.utcnow()
+            firewall.last_sync_error = None
+            db.session.commit()
+
+        return {
+            'success': True,
+            'message': '동기화가 완료되었습니다.',
+            'details': {
+                'rules': len(rules_df) if not rules_df.empty else 0,
+                'network_objects': len(network_df) if not network_df.empty else 0,
+                'network_groups': len(group_df) if not group_df.empty else 0,
+                'service_objects': len(service_df) if not service_df.empty else 0,
+                'service_groups': len(service_group_df) if not service_group_df.empty else 0
+            }
+        }
+
+    except Exception as e:
+        with app.app_context():
+            firewall.sync_status = 'failed'
+            firewall.last_sync_error = str(e)
+            db.session.commit()
+        return {'success': False, 'error': str(e)}
+
 @app.route('/firewall/sync/<int:id>', methods=['POST'])
 def sync_firewall(id):
     try:
         firewall = Firewall.query.get_or_404(id)
-        # TODO: 실제 방화벽 동기화 로직 구현
-        firewall.last_sync = datetime.utcnow()
+        
+        # 이미 동기화 중인 경우
+        if firewall.sync_status == 'syncing':
+            return jsonify({
+                'success': False,
+                'error': '이미 동기화가 진행 중입니다.'
+            })
+
+        # 동기화 상태 업데이트
+        firewall.sync_status = 'syncing'
         db.session.commit()
-        return jsonify({'success': True})
+
+        # 비동기 작업 시작
+        task = sync_firewall_task.delay(id)
+        
+        return jsonify({
+            'success': True,
+            'message': '동기화가 시작되었습니다.',
+            'task_id': task.id
+        })
+
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        # 오류 발생 시 sync_status를 'failed'로 업데이트
+        firewall.sync_status = 'failed'
+        firewall.last_sync_error = str(e)
+        db.session.commit()
+        
+        return jsonify({
+            'success': False,
+            'error': f'동기화 시작 중 오류가 발생했습니다: {str(e)}'
+        })
+
+@app.route('/firewall/sync/status/<task_id>')
+def sync_status(task_id):
+    task = sync_firewall_task.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {
+            'state': 'PENDING',
+            'progress': 0,
+        }
+    elif task.state == 'PROGRESS':
+        response = {
+            'state': 'PROGRESS',
+            'progress': task.info.get('progress', 0),
+        }
+    elif task.state == 'SUCCESS':
+        response = {
+            'state': 'SUCCESS',
+            'progress': 100,
+            'result': task.get()
+        }
+    else:  # FAILURE 등 다른 상태
+        # 실패 시 방화벽 상태도 업데이트
+        try:
+            task_info = str(task.info)
+            firewall_id = task_info.get('firewall_id') if isinstance(task_info, dict) else None
+            if firewall_id:
+                with app.app_context():
+                    firewall = Firewall.query.get(firewall_id)
+                    if firewall:
+                        firewall.sync_status = 'failed'
+                        firewall.last_sync_error = str(task.info)
+                        db.session.commit()
+        except Exception as e:
+            print(f"상태 업데이트 중 오류 발생: {str(e)}")
+            
+        response = {
+            'state': task.state,
+            'progress': 0,
+            'error': str(task.info)
+        }
+    return jsonify(response)
 
 @app.route('/firewall/template')
 def download_template():

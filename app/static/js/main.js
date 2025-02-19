@@ -168,20 +168,158 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 동기화 버튼 클릭
+    // 알림 기능
+    function showNotification(type, title, message, duration = 5000) {
+        const container = document.getElementById('notificationContainer');
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-title">${title}</div>
+                <div class="notification-message">${message}</div>
+            </div>
+            <button class="notification-close">&times;</button>
+        `;
+        
+        container.appendChild(notification);
+        
+        // 닫기 버튼 이벤트
+        const closeBtn = notification.querySelector('.notification-close');
+        closeBtn.addEventListener('click', () => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        });
+        
+        // 자동 제거
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, duration);
+        
+        return notification;
+    }
+
+    // 동기화 버튼 클릭 이벤트 수정
     document.querySelectorAll('.sync-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
+            const originalText = this.textContent;
+            const statusCell = this.closest('tr').querySelector('.sync-status');
+            const firewallName = this.closest('tr').cells[0].textContent;
+            
+            // 이미 동기화 중인지 확인
+            if (this.disabled) {
+                showNotification('info', '동기화 진행 중', `${firewallName} 방화벽이 이미 동기화 중입니다.`);
+                return;
+            }
+            
+            // 버튼 상태 업데이트
+            this.disabled = true;
+            this.classList.add('syncing');
+            
+            // 즉시 동기화 중 상태로 업데이트
+            statusCell.innerHTML = '<span class="sync-progress">동기화 중... <span class="progress-value">0</span>%</span>';
+            statusCell.className = 'sync-status syncing';
+            
+            // 동기화 시작 알림
+            showNotification('info', '동기화 시작', `${firewallName} 방화벽 동기화를 시작합니다.`);
+            
+            // 동기화 시작
             fetch(`/firewall/sync/${id}`, {
                 method: 'POST'
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    // 진행 상태 확인
+                    const checkProgress = () => {
+                        fetch(`/firewall/sync/status/${data.task_id}`)
+                        .then(response => response.json())
+                        .then(progressData => {
+                            if (progressData.state === 'SUCCESS') {
+                                // 동기화 완료
+                                showNotification('success', '동기화 완료', `${firewallName} 방화벽 동기화가 완료되었습니다.`);
+                                // 마지막 동기화 시간 업데이트
+                                const now = new Date().toLocaleString('ko-KR', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                });
+                                statusCell.innerHTML = now;
+                                statusCell.className = 'sync-status';
+                                
+                                // 버튼 상태 복원
+                                this.disabled = false;
+                                this.classList.remove('syncing');
+                                this.textContent = originalText;
+                                
+                                // 1초 후에 페이지 새로고침
+                                setTimeout(() => location.reload(), 1000);
+                            } else if (progressData.state === 'PROGRESS') {
+                                // 진행률 업데이트
+                                statusCell.innerHTML = '<span class="sync-progress">동기화 중... <span class="progress-value">' + progressData.progress + '</span>%</span>';
+                                statusCell.className = 'sync-status syncing';
+                                setTimeout(checkProgress, 1000);
+                            } else if (progressData.state === 'FAILURE') {
+                                // 실패 처리
+                                showNotification('error', '동기화 실패', `${firewallName} 방화벽 동기화 중 오류가 발생했습니다: ${progressData.error}`);
+                                statusCell.innerHTML = '실패';
+                                statusCell.className = 'sync-status failed';
+                                
+                                // 버튼 상태 복원
+                                this.disabled = false;
+                                this.classList.remove('syncing');
+                                this.textContent = originalText;
+                            } else if (progressData.state === 'PENDING') {
+                                // 대기 중
+                                statusCell.innerHTML = '<span class="sync-progress">대기 중...</span>';
+                                statusCell.className = 'sync-status syncing';
+                                setTimeout(checkProgress, 1000);
+                            }
+                        })
+                        .catch(error => {
+                            // 에러 처리
+                            showNotification('error', '상태 확인 실패', `${firewallName} 방화벽 동기화 상태 확인 중 오류가 발생했습니다.`);
+                            statusCell.innerHTML = '실패';
+                            statusCell.className = 'sync-status failed';
+                            
+                            // 버튼 상태 복원
+                            this.disabled = false;
+                            this.classList.remove('syncing');
+                            this.textContent = originalText;
+                        });
+                    };
+                    
+                    // 진행 상태 확인 시작
+                    setTimeout(checkProgress, 1000);
                 } else {
-                    alert('동기화 실패: ' + data.error);
+                    // 실패 처리
+                    showNotification('error', '동기화 시작 실패', `${firewallName} 방화벽 동기화를 시작할 수 없습니다: ${data.error}`);
+                    statusCell.innerHTML = '실패';
+                    statusCell.className = 'sync-status failed';
+                    
+                    // 버튼 상태 복원
+                    this.disabled = false;
+                    this.classList.remove('syncing');
+                    this.textContent = originalText;
                 }
+            })
+            .catch(error => {
+                // 에러 처리
+                showNotification('error', '요청 실패', `${firewallName} 방화벽 동기화 요청 중 오류가 발생했습니다.`);
+                statusCell.innerHTML = '실패';
+                statusCell.className = 'sync-status failed';
+                
+                // 버튼 상태 복원
+                this.disabled = false;
+                this.classList.remove('syncing');
+                this.textContent = originalText;
             });
         });
     });

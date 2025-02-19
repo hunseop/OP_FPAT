@@ -60,7 +60,20 @@
                             {{ '활성' if firewall.status else '비활성' }}
                         </span>
                     </td>
-                    <td>{{ firewall.last_sync.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <span class="sync-status {{ firewall.sync_status }}">
+                            {% if firewall.sync_status == 'syncing' %}
+                                <span class="sync-progress">동기화 중... <span class="progress-value">0</span>%</span>
+                            {% elif firewall.sync_status == 'failed' %}
+                                실패
+                                {% if firewall.last_sync_error %}
+                                <span class="error-tooltip" title="{{ firewall.last_sync_error }}">ⓘ</span>
+                                {% endif %}
+                            {% else %}
+                                {{ firewall.last_sync.strftime('%Y-%m-%d %H:%M') }}
+                            {% endif %}
+                        </span>
+                    </td>
                     <td>{{ firewall.policy_count }}</td>
                     <td>
                         <button class="btn btn-outline btn-sm sync-btn" data-id="{{ firewall.id }}">동기화</button>
