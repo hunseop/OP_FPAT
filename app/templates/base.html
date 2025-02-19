@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - FPAT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">FPAT</h1>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('index') }}" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                            대시보드
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('policy') }}" class="nav-item {% if request.endpoint == 'policy' %}active{% endif %}">
+                            정책 관리
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('analysis') }}" class="nav-item {% if request.endpoint == 'analysis' %}active{% endif %}">
+                            정책 분석
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('firewall') }}" class="nav-item {% if request.endpoint == 'firewall' %}active{% endif %}">
+                            방화벽 관리
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="main-header">
+                <div class="breadcrumb">
+                    <span class="current-path">{{ request.endpoint }}</span>
+                </div>
+                <div class="header-actions">
+                    <button class="action-button" id="notificationBtn">
+                        <span>알림</span>
+                    </button>
+                    <button class="action-button" id="settingsBtn">
+                        <span>설정</span>
+                    </button>
+                </div>
+            </header>
+            <div class="content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

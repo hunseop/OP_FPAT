@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="policy-management">
+    <div class="page-header">
+        <h2>정책 관리</h2>
+        <div class="header-actions">
+            <button class="btn btn-primary">새 정책 추가</button>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="search-box">
+            <input type="text" placeholder="정책 검색...">
+        </div>
+        <div class="filter-actions">
+            <select>
+                <option>모든 상태</option>
+                <option>활성</option>
+                <option>비활성</option>
+            </select>
+            <button class="btn btn-outline">필터</button>
+        </div>
+    </div>
+
+    <div class="policy-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>정책 ID</th>
+                    <th>이름</th>
+                    <th>상태</th>
+                    <th>마지막 수정</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>POL-001</td>
+                    <td>기본 접근 정책</td>
+                    <td><span class="badge active">활성</span></td>
+                    <td>2024-03-15</td>
+                    <td>
+                        <button class="btn-icon">수정</button>
+                        <button class="btn-icon">삭제</button>
+                    </td>
+                </tr>
+                <!-- 더미 데이터 추가 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="firewall-management">
+    <div class="page-header">
+        <h2>방화벽 관리</h2>
+        <div class="header-actions">
+            <button class="btn btn-primary" id="addFirewallBtn">방화벽 등록</button>
+        </div>
+    </div>
+
+    <div class="firewall-grid">
+        <!-- 등록된 방화벽 카드들 -->
+        <div class="firewall-card">
+            <div class="card-header">
+                <h3>NGF 방화벽</h3>
+                <span class="status active">활성</span>
+            </div>
+            <div class="card-content">
+                <div class="info-item">
+                    <span class="label">IP 주소</span>
+                    <span class="value">192.168.1.1</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">마지막 동기화</span>
+                    <span class="value">2024.03.15 14:30</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">정책 수</span>
+                    <span class="value">1,650</span>
+                </div>
+            </div>
+            <div class="card-actions">
+                <button class="btn btn-outline">동기화</button>
+                <button class="btn btn-outline">수정</button>
+                <button class="btn btn-outline danger">삭제</button>
+            </div>
+        </div>
+
+        <!-- 새 방화벽 추가 카드 -->
+        <div class="firewall-card add-card">
+            <div class="add-content">
+                <span class="add-icon">+</span>
+                <span class="add-text">새 방화벽 등록</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 방화벽 등록 모달 -->
+<div class="modal" id="firewallModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>방화벽 등록</h3>
+            <button class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="firewallForm">
+                <div class="form-group">
+                    <label for="name">방화벽 이름</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="type">방화벽 종류</label>
+                    <select id="type" name="type" required>
+                        <option value="ngf">NGF</option>
+                        <option value="mf2">MF2</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ip">IP 주소</label>
+                    <input type="text" id="ip" name="ip" required>
+                </div>
+                <div class="form-group">
+                    <label for="client_id">Client ID</label>
+                    <input type="text" id="client_id" name="client_id" required>
+                </div>
+                <div class="form-group">
+                    <label for="client_secret">Client Secret</label>
+                    <input type="password" id="client_secret" name="client_secret" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="cancelBtn">취소</button>
+                    <button type="submit" class="btn btn-primary">등록</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

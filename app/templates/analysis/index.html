@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="policy-analysis">
+    <div class="page-header">
+        <h2>정책 분석</h2>
+        <div class="header-actions">
+            <button class="btn btn-primary">분석 시작</button>
+        </div>
+    </div>
+
+    <div class="analysis-grid">
+        <div class="analysis-card">
+            <h3>미사용 정책</h3>
+            <div class="card-content">
+                <div class="stat-large">245</div>
+                <div class="stat-description">전체 정책의 15%</div>
+            </div>
+        </div>
+
+        <div class="analysis-card">
+            <h3>중복 정책</h3>
+            <div class="card-content">
+                <div class="stat-large">32</div>
+                <div class="stat-description">검토 필요</div>
+            </div>
+        </div>
+
+        <div class="analysis-card">
+            <h3>최적화 추천</h3>
+            <div class="card-content">
+                <div class="stat-large">128</div>
+                <div class="stat-description">정책 개선 가능</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="analysis-details">
+        <div class="section-card">
+            <h3>최근 분석 결과</h3>
+            <div class="analysis-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">2024-03-15</div>
+                    <div class="timeline-content">
+                        <h4>정기 정책 분석</h4>
+                        <p>미사용 정책 245개 발견</p>
+                    </div>
+                </div>
+                <!-- 추가 타임라인 아이템 -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

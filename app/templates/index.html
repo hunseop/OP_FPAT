@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- 상단 통계 카드 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">전체 정책</div>
+            <div class="stat-value">1,650</div>
+            <div class="stat-change increase">+3.2%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">활성 정책</div>
+            <div class="stat-value">1,405</div>
+            <div class="stat-change increase">+5.2%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">미사용 정책</div>
+            <div class="stat-value">245</div>
+            <div class="stat-change decrease">-2.4%</div>
+        </div>
+    </div>
+
+    <!-- 정책 분석 섹션 -->
+    <div class="analysis-section">
+        <div class="section-card">
+            <div class="card-header">
+                <h3>정책 분석</h3>
+                <span class="period">2024 Q1</span>
+            </div>
+            <div class="progress-list">
+                <div class="progress-item">
+                    <div class="progress-info">
+                        <span>활성 정책</span>
+                        <span>85%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 85%"></div>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <div class="progress-info">
+                        <span>미사용 정책</span>
+                        <span>15%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 15%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div class="card-header">
+                <h3>주요 지표</h3>
+            </div>
+            <div class="metrics-list">
+                <div class="metric-item">
+                    <span class="metric-label">정책 업데이트</span>
+                    <span class="metric-value">최근 7일</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">마지막 분석</span>
+                    <span class="metric-value">2024.03.15</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
