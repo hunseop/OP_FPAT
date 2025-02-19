@@ -78,13 +78,17 @@ class NGFCollector(FirewallInterface):
                 return service_df
         return pd.DataFrame(columns=['Name', 'Protocol', 'Port'])
 
+    # def export_service_group_objects(self) -> pd.DataFrame:
+    #     """서비스 그룹 객체 정보를 PaloAlto 형식으로 변환하여 반환합니다."""
+    #     service_group_objects = self.client.get_service_group_objects()
+    #     if service_group_objects and 'result' in service_group_objects:
+    #         group_df = pd.DataFrame(service_group_objects['result'])
+    #         if not group_df.empty:
+    #             return group_df[['name', 'members']].rename(
+    #                 columns={'name': 'Group Name', 'members': 'Entry'}
+    #             )
+    #     return pd.DataFrame(columns=['Group Name', 'Entry'])
+
     def export_service_group_objects(self) -> pd.DataFrame:
-        """서비스 그룹 객체 정보를 PaloAlto 형식으로 변환하여 반환합니다."""
-        service_group_objects = self.client.get_service_group_objects()
-        if service_group_objects and 'result' in service_group_objects:
-            group_df = pd.DataFrame(service_group_objects['result'])
-            if not group_df.empty:
-                return group_df[['name', 'members']].rename(
-                    columns={'name': 'Group Name', 'members': 'Entry'}
-                )
-        return pd.DataFrame(columns=['Group Name', 'Entry'])
+        """서비스 그룹 객체 정보를 멤버 정보와 함께 반환합니다."""
+        return self.client.export_service_group_objects_with_members()

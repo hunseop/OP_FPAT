@@ -369,6 +369,53 @@ class NGFClient:
                                             if isinstance(x, dict) else x))
 
         return df
+    
+def export_service_group_objects_with_members(self) -> pd.DataFrame:
+    """
+    서비스 그룹 객체와 해당 멤버들의 정보를 포함한 DataFrame을 반환합니다.
+    """
+    # 1. 먼저 모든 서비스 객체 정보를 가져옴 (캐싱용)
+    service_df = self.export_objects('service')
+    # srv_obj_id를 키로, name을 값으로 하는 매핑 딕셔너리 생성
+    service_lookup = {}
+    if not service_df.empty:
+        for _, row in service_df.iterrows():
+            if 'srv_obj_id' in row and 'name' in row:
+                service_lookup[str(row['srv_obj_id'])] = row['name']
+    
+    # 2. 서비스 그룹 기본 정보 가져오기
+    group_df = self.export_objects('service_group')
+    if group_df.empty:
+        return pd.DataFrame()
+    
+    # 3. 각 그룹의 상세 정보를 저장할 리스트
+    group_details = []
+    
+    # 4. 각 서비스 그룹에 대해 멤버 정보 조회
+    for _, group in group_df.iterrows():
+        group_info = self.export_service_group_objects_info(group['name'])
+        if not group_info.empty:
+            detail = group_info.iloc[0] if len(group_info) > 0 else None
+            if detail is not None:
+                # mem_id 문자열을 ; 기준으로 분리하여 리스트로 변환
+                member_ids = str(detail['mem_id']).split(';') if detail['mem_id'] else []
+                # ID를 이름으로 변환 (매핑되는 이름이 없으면 'Unknown_{id}' 사용)
+                member_names = []
+                for member_id in member_ids:
+                    member_id = member_id.strip()  # 공백 제거
+                    if member_id:  # 빈 문자열이 아닌 경우만 처리
+                        member_name = service_lookup.get(member_id)
+                        if member_name:
+                            member_names.append(member_name)
+                        else:
+                            member_names.append(f'Unknown_{member_id}')
+                
+                group_details.append({
+                    'Group Name': group['name'],
+                    'Entry': ','.join(member_names) if member_names else ''
+                })
+    
+    return pd.DataFrame(group_details)
 
 # ────────────── 모듈 테스트 예시 ──────────────
 if __name__ == '__main__':
