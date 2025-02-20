@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showNotification('info', '동기화 시작', `${firewallName} 방화벽 동기화를 시작합니다.`);
             
             // 동기화 시작
-            fetch(`/firewall/sync/${id}`, {
+            fetch(`/api/firewall/sync/${id}`, {
                 method: 'POST'
             })
             .then(response => response.json())
@@ -236,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     // 진행 상태 확인
                     const checkProgress = () => {
-                        fetch(`/firewall/sync/status/${data.task_id}`)
+                        fetch(`/api/firewall/sync/status/${id}`)
                         .then(response => response.json())
                         .then(progressData => {
                             if (progressData.state === 'SUCCESS') {

@@ -17,22 +17,22 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li>
-                        <a href="{{ url_for('index') }}" class="nav-item {% if request.endpoint == 'index' %}active{% endif %}">
+                        <a href="{{ url_for('main.index') }}" class="nav-item {% if request.endpoint == 'main.index' %}active{% endif %}">
                             대시보드
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('policy') }}" class="nav-item {% if request.endpoint == 'policy' %}active{% endif %}">
+                        <a href="{{ url_for('main.policy') }}" class="nav-item {% if request.endpoint == 'main.policy' %}active{% endif %}">
                             정책 관리
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('analysis') }}" class="nav-item {% if request.endpoint == 'analysis' %}active{% endif %}">
+                        <a href="{{ url_for('main.analysis') }}" class="nav-item {% if request.endpoint == 'main.analysis' %}active{% endif %}">
                             정책 분석
                         </a>
                     </li>
                     <li>
-                        <a href="{{ url_for('firewall') }}" class="nav-item {% if request.endpoint == 'firewall' %}active{% endif %}">
+                        <a href="{{ url_for('firewall.index') }}" class="nav-item {% if request.endpoint == 'firewall.index' %}active{% endif %}">
                             방화벽 관리
                         </a>
                     </li>
