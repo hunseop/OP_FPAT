@@ -69,151 +69,165 @@ class SyncManager:
                 if not firewall:
                     logger.error(f"방화벽 {firewall_id}를 찾을 수 없음")
                     return
-                
-                # 상태 초기화
-                with self._lock:
-                    self._active_syncs[firewall_id] = {
-                        'status': 'syncing',
-                        'progress': 0,
-                        'start_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    }
-                
-                # Collector 생성
-                collector_params = {
-                    'ngf': {
-                        'hostname': firewall.ip_address,
-                        'ext_clnt_id': firewall.username,
-                        'ext_clnt_secret': firewall.password
-                    },
-                    'mf2': {
-                        'device_ip': firewall.ip_address,
-                        'username': firewall.username,
-                        'password': firewall.password
-                    },
-                    'paloalto': {
-                        'hostname': firewall.ip_address,
-                        'username': firewall.username,
-                        'password': firewall.password
-                    }
-                }
 
-                if firewall.type not in collector_params:
-                    raise ValueError(f"지원하지 않는 방화벽 타입입니다: {firewall.type}")
-
-                collector = FirewallCollectorFactory.get_collector(
-                    firewall.type,
-                    **collector_params[firewall.type]
-                )
-                self._update_progress(firewall_id, 20)
-
-                # 데이터 수집
                 try:
-                    rules_df = collector.export_security_rules()
-                    self._update_progress(firewall_id, 40)
-                    
-                    network_df = collector.export_network_objects()
-                    self._update_progress(firewall_id, 60)
-                    
-                    group_df = collector.export_network_group_objects()
-                    service_df = collector.export_service_objects()
-                    service_group_df = collector.export_service_group_objects()
-                    self._update_progress(firewall_id, 80)
+                    # 상태 초기화
+                    with self._lock:
+                        self._active_syncs[firewall_id] = {
+                            'status': 'syncing',
+                            'progress': 0,
+                            'start_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
 
-                    # 데이터가 정상적으로 수집된 경우에만 기존 데이터 삭제 및 새 데이터 추가
-                    if all(not df.empty for df in [rules_df, network_df, group_df, service_df, service_group_df]):
-                        try:
-                            # 트랜잭션 시작
-                            db.session.begin_nested()
+                    # 방화벽 상태 업데이트
+                    firewall.sync_status = 'syncing'
+                    db.session.commit()
 
-                            # 기존 데이터 삭제
-                            SecurityRule.query.filter_by(firewall_id=firewall.id).delete()
-                            NetworkObject.query.filter_by(firewall_id=firewall.id).delete()
-                            NetworkGroup.query.filter_by(firewall_id=firewall.id).delete()
-                            ServiceObject.query.filter_by(firewall_id=firewall.id).delete()
-                            ServiceGroup.query.filter_by(firewall_id=firewall.id).delete()
+                    # Collector 생성
+                    collector_params = {
+                        'ngf': {
+                            'hostname': firewall.ip_address,
+                            'ext_clnt_id': firewall.username,
+                            'ext_clnt_secret': firewall.password
+                        },
+                        'mf2': {
+                            'device_ip': firewall.ip_address,
+                            'username': firewall.username,
+                            'password': firewall.password
+                        },
+                        'paloalto': {
+                            'hostname': firewall.ip_address,
+                            'username': firewall.username,
+                            'password': firewall.password
+                        }
+                    }
 
-                            # 새 데이터 추가
-                            for _, row in rules_df.iterrows():
-                                rule = SecurityRule(
-                                    firewall_id=firewall.id,
-                                    seq=row.get('Seq'),
-                                    name=row.get('Rule Name'),
-                                    enabled=row.get('Enable'),
-                                    action=row.get('Action'),
-                                    source=row.get('Source'),
-                                    user=row.get('User'),
-                                    destination=row.get('Destination'),
-                                    service=row.get('Service'),
-                                    application=row.get('Application'),
-                                    description=row.get('Description'),
-                                    last_hit=row.get('Last Hit Date') if pd.notna(row.get('Last Hit Date')) else None
-                                )
-                                db.session.add(rule)
+                    if firewall.type not in collector_params:
+                        raise ValueError(f"지원하지 않는 방화벽 타입입니다: {firewall.type}")
 
-                            for _, row in network_df.iterrows():
-                                obj = NetworkObject(
-                                    firewall_id=firewall.id,
-                                    name=row['Name'],
-                                    type=row.get('Type'),
-                                    value=row['Value']
-                                )
-                                db.session.add(obj)
-                            
-                            for _, row in group_df.iterrows():
-                                group = NetworkGroup(
-                                    firewall_id=firewall.id,
-                                    name=row['Group Name'],
-                                    members=row.get('Entry')
-                                )
-                                db.session.add(group)
-                            
-                            for _, row in service_df.iterrows():
-                                obj = ServiceObject(
-                                    firewall_id=firewall.id,
-                                    name=row['Name'],
-                                    protocol=row.get('Protocol'),
-                                    port=row.get('Port')
-                                )
-                                db.session.add(obj)
-                            
-                            for _, row in service_group_df.iterrows():
-                                group = ServiceGroup(
-                                    firewall_id=firewall.id,
-                                    name=row['Group Name'],
-                                    members=row.get('Entry')
-                                )
-                                db.session.add(group)
+                    collector = FirewallCollectorFactory.get_collector(
+                        firewall.type,
+                        **collector_params[firewall.type]
+                    )
+                    self._update_progress(firewall_id, 20)
 
-                            # 동기화 상태 업데이트
-                            firewall.sync_status = 'success'
-                            firewall.last_sync = datetime.utcnow()
-                            firewall.last_sync_error = None
-                            
-                            # 트랜잭션 커밋
-                            db.session.commit()
-                            logger.info(f"방화벽 {firewall_id} 동기화 성공")
-                            self._update_progress(firewall_id, 100)
+                    # 데이터 수집
+                    try:
+                        rules_df = collector.export_security_rules()
+                        self._update_progress(firewall_id, 40)
+                        
+                        network_df = collector.export_network_objects()
+                        self._update_progress(firewall_id, 60)
+                        
+                        group_df = collector.export_network_group_objects()
+                        service_df = collector.export_service_objects()
+                        service_group_df = collector.export_service_group_objects()
+                        self._update_progress(firewall_id, 80)
 
-                        except Exception as e:
-                            db.session.rollback()
-                            raise Exception(f"데이터베이스 업데이트 중 오류 발생: {str(e)}")
-                    else:
-                        raise Exception("일부 데이터를 수집할 수 없습니다.")
+                        # 데이터가 정상적으로 수집된 경우에만 기존 데이터 삭제 및 새 데이터 추가
+                        if all(not df.empty for df in [rules_df, network_df, group_df, service_df, service_group_df]):
+                            try:
+                                # 트랜잭션 시작
+                                db.session.begin_nested()
+
+                                # 기존 데이터 삭제
+                                SecurityRule.query.filter_by(firewall_id=firewall.id).delete()
+                                NetworkObject.query.filter_by(firewall_id=firewall.id).delete()
+                                NetworkGroup.query.filter_by(firewall_id=firewall.id).delete()
+                                ServiceObject.query.filter_by(firewall_id=firewall.id).delete()
+                                ServiceGroup.query.filter_by(firewall_id=firewall.id).delete()
+
+                                # 새 데이터 추가
+                                for _, row in rules_df.iterrows():
+                                    rule = SecurityRule(
+                                        firewall_id=firewall.id,
+                                        seq=row.get('Seq'),
+                                        name=row.get('Rule Name'),
+                                        enabled=row.get('Enable'),
+                                        action=row.get('Action'),
+                                        source=row.get('Source'),
+                                        user=row.get('User'),
+                                        destination=row.get('Destination'),
+                                        service=row.get('Service'),
+                                        application=row.get('Application'),
+                                        description=row.get('Description'),
+                                        last_hit=row.get('Last Hit Date') if pd.notna(row.get('Last Hit Date')) else None
+                                    )
+                                    db.session.add(rule)
+
+                                for _, row in network_df.iterrows():
+                                    obj = NetworkObject(
+                                        firewall_id=firewall.id,
+                                        name=row['Name'],
+                                        type=row.get('Type'),
+                                        value=row['Value']
+                                    )
+                                    db.session.add(obj)
+                                
+                                for _, row in group_df.iterrows():
+                                    group = NetworkGroup(
+                                        firewall_id=firewall.id,
+                                        name=row['Group Name'],
+                                        members=row.get('Entry')
+                                    )
+                                    db.session.add(group)
+                                
+                                for _, row in service_df.iterrows():
+                                    obj = ServiceObject(
+                                        firewall_id=firewall.id,
+                                        name=row['Name'],
+                                        protocol=row.get('Protocol'),
+                                        port=row.get('Port')
+                                    )
+                                    db.session.add(obj)
+                                
+                                for _, row in service_group_df.iterrows():
+                                    group = ServiceGroup(
+                                        firewall_id=firewall.id,
+                                        name=row['Group Name'],
+                                        members=row.get('Entry')
+                                    )
+                                    db.session.add(group)
+
+                                # 동기화 상태 업데이트
+                                firewall.sync_status = 'success'
+                                firewall.last_sync = datetime.utcnow()
+                                firewall.last_sync_error = None
+                                
+                                # 트랜잭션 커밋
+                                db.session.commit()
+                                logger.info(f"방화벽 {firewall_id} 동기화 성공")
+                                self._update_progress(firewall_id, 100)
+
+                            except Exception as e:
+                                db.session.rollback()
+                                raise Exception(f"데이터베이스 업데이트 중 오류 발생: {str(e)}")
+                        else:
+                            raise Exception("일부 데이터를 수집할 수 없습니다.")
+
+                    except Exception as e:
+                        raise Exception(f"데이터 수집 중 오류 발생: {str(e)}")
 
                 except Exception as e:
-                    raise Exception(f"데이터 수집 중 오류 발생: {str(e)}")
+                    error_msg = str(e)
+                    logger.error(f"방화벽 {firewall_id} 동기화 실패: {error_msg}")
+                    
+                    # 방화벽 상태 업데이트
+                    firewall.sync_status = 'failed'
+                    firewall.last_sync_error = error_msg
+                    db.session.commit()
+                    
+                    # active_syncs에서 제거
+                    with self._lock:
+                        if firewall_id in self._active_syncs:
+                            del self._active_syncs[firewall_id]
+                    
+                    return  # 실패 시 즉시 반환
 
         except Exception as e:
-            logger.error(f"방화벽 {firewall_id} 동기화 실패: {str(e)}")
-            with app.app_context():
-                firewall.sync_status = 'failed'
-                firewall.last_sync_error = str(e)
-                db.session.commit()
-            with self._lock:
-                if firewall_id in self._active_syncs:
-                    self._active_syncs[firewall_id]['error'] = str(e)
-        
+            logger.error(f"예상치 못한 오류 발생: {str(e)}")
         finally:
+            # 마지막 안전장치: active_syncs에서 항상 제거
             with self._lock:
                 if firewall_id in self._active_syncs:
                     del self._active_syncs[firewall_id]

@@ -117,41 +117,42 @@ class PaloAltoAPI:
         return ','.join(str(item) for item in list_data)
 
     def get_api_data(self, parameters, timeout: int = 10000):
-        """
-        API 호출을 수행합니다.
-
-        :param parameters: 요청 파라미터 (dict 또는 tuple)
-        :param timeout: 타임아웃 (초)
-        :return: API 응답 객체
-        :raises ValueError: 요청 중 오류 발생 시
-        """
+        """API 호출을 수행합니다."""
         try:
-            response = requests.get(self.base_url, params=parameters, verify=False, timeout=timeout)
+            response = requests.get(
+                self.base_url,
+                params=parameters,
+                verify=False,
+                timeout=timeout
+            )
+            if response.status_code != 200:
+                raise Exception(f"API 요청 실패 (상태 코드: {response.status_code}): {response.text}")
             return response
-        except requests.exceptions.RequestException as error:
-            raise ValueError(f"API 요청 중 오류 발생: {error}")
+        except requests.exceptions.Timeout:
+            raise Exception("API 요청 시간 초과")
+        except requests.exceptions.ConnectionError:
+            raise Exception(f"API 서버 연결 실패: {self.hostname}")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"API 요청 중 오류 발생: {str(e)}")
 
     def _get_api_key(self, username: str, password: str) -> str:
-        """
-        API 키를 생성합니다.
-
-        :param username: 사용자 이름
-        :param password: 비밀번호
-        :return: API 키 문자열
-        :raises ValueError: API 요청 오류 발생 시
-        """
-        keygen_params = (
-            ('type', 'keygen'),
-            ('user', username),
-            ('password', password)
-        )
-
+        """API 키를 생성합니다."""
         try:
+            keygen_params = (
+                ('type', 'keygen'),
+                ('user', username),
+                ('password', password)
+            )
             response = self.get_api_data(keygen_params)
-            key_element = ET.fromstring(response.text).find('./result/key')
-            return key_element.text if key_element is not None else ""
-        except requests.exceptions.RequestException as error:
-            raise ValueError(f"API 요청 중 오류 발생: {error}")
+            tree = ET.fromstring(response.text)
+            key_element = tree.find('./result/key')
+            if key_element is None:
+                raise Exception("API 키를 찾을 수 없습니다")
+            return key_element.text
+        except ET.ParseError:
+            raise Exception("API 응답 XML 파싱 실패")
+        except Exception as e:
+            raise Exception(f"API 키 생성 실패: {str(e)}")
 
     def get_vsys_list(self) -> list:
         """

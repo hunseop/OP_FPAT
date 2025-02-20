@@ -105,40 +105,39 @@ def download_file(ssh: paramiko.SSHClient, remote_directory: str, file_name: str
 
 def export_mf2_data(host: str, port: int, username: str, password: str,
                     remote_directory: str, local_directory: str) -> list:
-    """
-    원격 장비의 정책 파일 및 conf 파일을 다운로드합니다.
-    POLICY_DIRECTORY 및 CONF_DIRECTORY 명령어를 사용하여
-    fwrules 파일(최신 파일 1건)과 지정된 conf 파일들을 로컬로 다운로드한 후,
-    다운로드된 파일명 리스트를 반환합니다.
-    """
     downloaded_files = []
-    ssh = create_ssh_client(host, port, username, password)
+    ssh = None
     try:
-        # fwrules 파일 다운로드 (최신 파일 1건)
-        _, stdout, _ = exec_remote_command(ssh, POLICY_DIRECTORY, remote_directory)
+        ssh = create_ssh_client(host, port, username, password)
+        # fwrules 파일 다운로드
+        _, stdout, stderr = exec_remote_command(ssh, POLICY_DIRECTORY, remote_directory)
+        if stderr.read():
+            raise Exception(f"정책 파일 조회 실패: {stderr.read().decode()}")
+            
         fwrules_lines = stdout.readlines()
         if fwrules_lines:
             latest_file = fwrules_lines[0].split()[-1]
             downloaded_files.append(download_file(ssh, remote_directory, latest_file, local_directory, host))
 
-        # conf 파일 다운로드 (지정된 파일들)
-        specified_conf_files = [
-            'groupobject.conf',
-            'hostobject.conf',
-            'networkobject.conf',
-            'serviceobject.conf',
-        ]
-        _, stdout, _ = exec_remote_command(ssh, CONF_DIRECTORY, remote_directory)
+        # conf 파일 다운로드
+        specified_conf_files = ['groupobject.conf', 'hostobject.conf', 'networkobject.conf', 'serviceobject.conf']
+        _, stdout, stderr = exec_remote_command(ssh, CONF_DIRECTORY, remote_directory)
+        if stderr.read():
+            raise Exception(f"설정 파일 조회 실패: {stderr.read().decode()}")
+            
         conf_lines = stdout.readlines()
         for line in conf_lines:
             conf_file = line.strip()
             if conf_file in specified_conf_files:
                 downloaded_files.append(download_file(ssh, remote_directory, conf_file, local_directory, host))
-    except Exception as e:
-        logging.error("export_mf2_data error: %s", e)
-    finally:
-        ssh.close()
+        
         return downloaded_files
+    except Exception as e:
+        logging.error(f"MF2 데이터 내보내기 실패 - {host}: {str(e)}")
+        raise Exception(f"MF2 데이터 내보내기 실패: {str(e)}")
+    finally:
+        if ssh:
+            ssh.close()
 
 
 def download_rule_file(host: str, port: int, username: str, password: str,

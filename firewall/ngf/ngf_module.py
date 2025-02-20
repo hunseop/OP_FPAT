@@ -200,76 +200,82 @@ class NGFClient:
         """
         NGF 규칙 데이터를 파싱하여 pandas DataFrame으로 반환합니다.
         """
-        token = self.login()
-        if token:
+        try:
+            token = self.login()
+            if not token:
+                raise Exception("NGF 로그인 실패")
+            
             rules_data = self.get_fw4_rules()
-            self.logout()
+            if not rules_data:
+                raise Exception("규칙 데이터를 가져올 수 없습니다")
+            
+            security_rules = []
+            rules = rules_data.get("result", [])
+            for rule in rules:
+                seq = rule.get("seq")
+                fw_rule_id = rule.get("fw_rule_id")
+                name = rule.get("name")
+                # default rule은 건너뜁니다.
+                if name == "default":
+                    continue
+                use = "Y" if rule.get("use") == 1 else "N"
+                action = "allow" if rule.get("action") == 1 else "deny"
+
+                src_list = rule.get("src")
+                if not src_list:
+                    src_list = "any"
+                else:
+                    src_list = [src.get("name") for src in src_list]
+
+                user_list = rule.get("user")
+                if not user_list:
+                    user_list = "any"
+                else:
+                    user_list = [list(user.values())[0] for user in user_list]
+
+                dst_list = rule.get("dst")
+                if not dst_list:
+                    dst_list = "any"
+                else:
+                    dst_list = [dst.get("name") for dst in dst_list]
+
+                srv_list = rule.get("srv")
+                if not srv_list:
+                    srv_list = "any"
+                else:
+                    srv_list = [srv.get("name") for srv in srv_list]
+
+                app_list = rule.get("app")
+                if not app_list:
+                    app_list = "any"
+                else:
+                    app_list = [app.get("name") for app in app_list]
+
+                last_hit_time = rule.get("last_hit_time")
+                desc = rule.get("desc")
+
+                info = {
+                    "Seq": seq,
+                    "Rule Name": fw_rule_id,
+                    "Enable": use,
+                    "Action": action,
+                    "Source": self.list_to_string(src_list),
+                    "User": self.list_to_string(user_list),
+                    "Destination": self.list_to_string(dst_list),
+                    "Service": self.list_to_string(srv_list),
+                    "Application": self.list_to_string(app_list),
+                    "Last Hit Date": last_hit_time,
+                    "Description": desc
+                }
+                security_rules.append(info)
+
+            return pd.DataFrame(security_rules)
         
-        if not rules_data:
-            logging.error("No rules data available")
-            return pd.DataFrame()
-
-        security_rules = []
-        rules = rules_data.get("result", [])
-        for rule in rules:
-            seq = rule.get("seq")
-            fw_rule_id = rule.get("fw_rule_id")
-            name = rule.get("name")
-            # default rule은 건너뜁니다.
-            if name == "default":
-                continue
-            use = "Y" if rule.get("use") == 1 else "N"
-            action = "allow" if rule.get("action") == 1 else "deny"
-
-            src_list = rule.get("src")
-            if not src_list:
-                src_list = "any"
-            else:
-                src_list = [src.get("name") for src in src_list]
-
-            user_list = rule.get("user")
-            if not user_list:
-                user_list = "any"
-            else:
-                user_list = [list(user.values())[0] for user in user_list]
-
-            dst_list = rule.get("dst")
-            if not dst_list:
-                dst_list = "any"
-            else:
-                dst_list = [dst.get("name") for dst in dst_list]
-
-            srv_list = rule.get("srv")
-            if not srv_list:
-                srv_list = "any"
-            else:
-                srv_list = [srv.get("name") for srv in srv_list]
-
-            app_list = rule.get("app")
-            if not app_list:
-                app_list = "any"
-            else:
-                app_list = [app.get("name") for app in app_list]
-
-            last_hit_time = rule.get("last_hit_time")
-            desc = rule.get("desc")
-
-            info = {
-                "Seq": seq,
-                "Rule Name": fw_rule_id,
-                "Enable": use,
-                "Action": action,
-                "Source": self.list_to_string(src_list),
-                "User": self.list_to_string(user_list),
-                "Destination": self.list_to_string(dst_list),
-                "Service": self.list_to_string(srv_list),
-                "Application": self.list_to_string(app_list),
-                "Last Hit Date": last_hit_time,
-                "Description": desc
-            }
-            security_rules.append(info)
-
-        return pd.DataFrame(security_rules)
+        except Exception as e:
+            logging.error(f"NGF 규칙 데이터 수집 중 오류 발생: {str(e)}")
+            raise Exception(f"NGF 규칙 데이터 수집 실패: {str(e)}")
+        finally:
+            self.logout()
 
     def export_objects(self, object_type: str, use_session: bool = True) -> pd.DataFrame:
         """
@@ -281,48 +287,53 @@ class NGFClient:
                               False면 외부 세션 사용
         """
         if not object_type:
-            logging.error("object_type 파라미터를 지정해야 합니다.")
-            return pd.DataFrame()
+            raise ValueError("object_type 파라미터를 지정해야 합니다.")
 
         def _get_data():
-            type_to_getter = {
-                "host": self.get_host_objects,
-                "network": self.get_network_objects,
-                "domain": self.get_domain_objects,
-                "group": self.get_group_objects,
-                "service": self.get_service_objects,
-                "service_group": self.get_service_group_objects,
-            }
+            try:
+                type_to_getter = {
+                    "host": self.get_host_objects,
+                    "network": self.get_network_objects,
+                    "domain": self.get_domain_objects,
+                    "group": self.get_group_objects,
+                    "service": self.get_service_objects,
+                    "service_group": self.get_service_group_objects,
+                }
 
-            getter = type_to_getter.get(object_type)
-            if not getter:
-                logging.error("유효하지 않은 객체 타입: %s", object_type)
-                return pd.DataFrame()
-            
-            data = getter()
-            if not data:
-                logging.error("데이터를 가져올 수 없습니다: %s", object_type)
-                return pd.DataFrame()
-            
-            results = data.get("result", [])
-            if not results:
-                logging.error("결과 데이터가 없습니다: %s", object_type)
-                return pd.DataFrame()
-            
-            df = pd.json_normalize(results, sep='_')
-            
-            for col in df.columns:
-                df[col] = df[col].apply(lambda x: self.list_to_string(x)
-                                    if isinstance(x, list)
-                                    else (','.join(map(str, x.values()))
-                                            if isinstance(x, dict) else x))
-            return df
+                getter = type_to_getter.get(object_type)
+                if not getter:
+                    raise ValueError(f"유효하지 않은 객체 타입: {object_type}")
+                
+                data = getter()
+                if not data:
+                    raise Exception(f"데이터를 가져올 수 없습니다: {object_type}")
+                
+                results = data.get("result", [])
+                if not results:
+                    logging.warning(f"결과 데이터가 없습니다: {object_type}")
+                    return pd.DataFrame()
+                
+                df = pd.json_normalize(results, sep='_')
+                
+                for col in df.columns:
+                    df[col] = df[col].apply(lambda x: self.list_to_string(x)
+                                        if isinstance(x, list)
+                                        else (','.join(map(str, x.values()))
+                                                if isinstance(x, dict) else x))
+                return df
 
-        if use_session:
-            with self.session():
+            except Exception as e:
+                logging.error(f"NGF {object_type} 객체 데이터 수집 중 오류 발생: {str(e)}")
+                raise Exception(f"NGF {object_type} 객체 데이터 수집 실패: {str(e)}")
+
+        try:
+            if use_session:
+                with self.session():
+                    return _get_data()
+            else:
                 return _get_data()
-        else:
-            return _get_data()
+        except Exception as e:
+            raise Exception(f"NGF {object_type} 객체 데이터 수집 실패: {str(e)}")
 
     def export_service_group_objects_with_members(self) -> pd.DataFrame:
         """
