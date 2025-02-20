@@ -32,11 +32,11 @@ def validate_ip_address(ip: str) -> Tuple[bool, Optional[str]]:
 
 def validate_username(username: str) -> Tuple[bool, Optional[str]]:
     """사용자 이름 검증
-    - 4자 이상 20자 이하
+    - 4자 이상 32자 이하
     - 영문, 숫자만 허용
     """
-    if not 4 <= len(username) <= 20:
-        return False, "사용자 이름은 4자 이상 20자 이하여야 합니다."
+    if not 4 <= len(username) <= 32:
+        return False, "사용자 이름은 4자 이상 32자 이하여야 합니다."
     
     if not re.match(r'^[a-zA-Z0-9]+$', username):
         return False, "사용자 이름은 영문과 숫자만 사용할 수 있습니다."
