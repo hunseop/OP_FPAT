@@ -16,36 +16,254 @@
 
 .firewall-table table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .firewall-table th,
 .firewall-table td {
-    padding: var(--spacing-md);
+    padding: 12px 16px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
-    font-size: var(--font-sm);
+    font-size: 13px;
 }
 
 .firewall-table th {
-    background: rgba(0, 0, 0, 0.02);
-    font-weight: 500;
-    color: var(--text-color);
-    position: relative;
-    cursor: pointer;
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+    border-bottom: 2px solid #e2e8f0;
 }
 
 .firewall-table th .sort-icon {
-    margin-left: var(--spacing-sm);
-    opacity: 0.5;
+    opacity: 0.3;
+    margin-left: 4px;
 }
 
 .firewall-table th:hover .sort-icon {
     opacity: 1;
 }
 
+.firewall-table tbody tr {
+    transition: background-color 0.2s;
+}
+
 .firewall-table tbody tr:hover {
-    background: rgba(0, 0, 0, 0.01);
+    background-color: #f1f5f9;
+}
+
+.firewall-table tbody td {
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+/* 각 컬럼 너비 고정 */
+.firewall-table th:nth-child(1),
+.firewall-table td:nth-child(1) {
+    width: 100px;
+    text-align: center;
+}
+
+.firewall-table th:nth-child(2),
+.firewall-table td:nth-child(2) {
+    width: 25%;
+}
+
+.firewall-table th:nth-child(3),
+.firewall-table td:nth-child(3) {
+    width: 15%;
+}
+
+.firewall-table th:nth-child(4),
+.firewall-table td:nth-child(4) {
+    width: 20%;
+}
+
+.firewall-table th:nth-child(5),
+.firewall-table td:nth-child(5) {
+    width: calc(40% - 220px);
+    min-width: 150px;
+}
+
+.firewall-table th:last-child,
+.firewall-table td:last-child {
+    width: 120px;
+    text-align: center;
+}
+
+/* 상태 컬럼 */
+.firewall-table th:first-child,
+.firewall-table td:first-child {
+    width: 100px;
+    text-align: center;
+}
+
+/* 작업 컬럼 */
+.firewall-table th:last-child,
+.firewall-table td:last-child {
+    width: 120px;
+    text-align: center;
+}
+
+/* 상태 토글 버튼 */
+.status-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 28px;
+    border: none;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.status-toggle.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status-toggle.active:hover {
+    background: #bbf7d0;
+}
+
+.status-toggle.inactive {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.status-toggle.inactive:hover {
+    background: #fecaca;
+}
+
+/* 동기화 상태 */
+.sync-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.sync-status.syncing {
+    color: #0284c7;
+}
+
+.sync-status.failed {
+    color: #dc2626;
+}
+
+/* 버튼 그룹 */
+.btn-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 아이콘 버튼 */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background: #f8fafc;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+.btn-icon.danger {
+    color: #dc2626;
+}
+
+.btn-icon.danger:hover {
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+/* 에러 툴팁 */
+.error-tooltip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 12px;
+    margin-left: 4px;
+    cursor: help;
+}
+
+/* 동기화 애니메이션 */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.sync-btn.syncing svg {
+    animation: spin 1s linear infinite;
+}
+
+.sync-btn.syncing {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    color: #0284c7;
+}
+
+/* 상태 표시 배지 */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.status-indicator.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status-indicator.inactive {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* 컬럼 제목 */
+.column-title {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+    font-weight: normal;
+}
+
+/* 정책 수 컬럼 */
+.firewall-table td:nth-child(7) {
+    font-weight: 600;
+    color: var(--primary-color);
 }
 
 /* 상태 표시 */
@@ -58,87 +276,14 @@
     font-weight: 500;
 }
 
-.status.active {
-    background: #dcfce7;
-    color: #15803d;
-}
-
 .status:not(.active) {
     background: #fee2e2;
     color: #b91c1c;
 }
 
-/* 동기화 상태 */
-.sync-status {
+.sync-progress {
     display: inline-flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    font-size: var(--font-sm);
-}
-
-.sync-status.syncing {
-    color: #2563eb;
-}
-
-.sync-status.failed {
-    color: #dc2626;
-}
-
-.sync-progress {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.error-tooltip {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    line-height: 16px;
-    text-align: center;
-    border-radius: 50%;
-    background: #fee2e2;
-    color: #b91c1c;
-    cursor: help;
-    margin-left: var(--spacing-sm);
-}
-
-/* 버튼 스타일 */
-.btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: var(--font-sm);
-}
-
-.btn.danger {
-    color: #dc2626;
-    border-color: #fee2e2;
-}
-
-.btn.danger:hover {
-    background: #fee2e2;
-}
-
-.sync-btn.syncing {
-    position: relative;
-    color: transparent;
-}
-
-.sync-btn.syncing::after {
-    content: '';
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    border: 2px solid #2563eb;
-    border-right-color: transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    gap: 4px;
+    white-space: nowrap;
 } 

@@ -5,7 +5,7 @@ class Firewall(db.Model):
     """방화벽 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    type = db.Column(db.String(20), nullable=False)  # 'ngf', 'mf2', 'paloalto'
+    type = db.Column(db.String(20), nullable=False)  # 'ngf', 'mf2', 'paloalto', 'mock'
     ip_address = db.Column(db.String(100), nullable=False)
     username = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(200), nullable=False)
@@ -28,7 +28,8 @@ class Firewall(db.Model):
         type_map = {
             'ngf': 'NGF',
             'mf2': 'MF2',
-            'paloalto': 'PALOALTO'
+            'paloalto': 'PALOALTO',
+            'mock': 'MOCK'
         }
         return type_map.get(self.type, self.type.upper())
 

@@ -1,5 +1,6 @@
 from firewall.firewall_interface import FirewallInterface
 from .mock_module import MockFirewall
+import pandas as pd
 
 class MockCollector(FirewallInterface):
     """테스트용 가상 방화벽 Collector"""
@@ -25,4 +26,15 @@ class MockCollector(FirewallInterface):
     
     def export_service_group_objects(self):
         """서비스 그룹 내보내기"""
-        return self.client.export_service_group_objects() 
+        return self.client.export_service_group_objects()
+
+    def get_system_info(self):
+        """시스템 정보 조회 (Mock)"""
+        return pd.DataFrame({
+            'hostname': [self.client.hostname],
+            'version': ['1.0.0'],
+            'model': ['Mock Firewall'],
+            'serial': ['MOCK-12345'],
+            'uptime': ['365 days'],
+            'status': ['running']
+        }) 

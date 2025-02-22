@@ -40,26 +40,25 @@
         <table class="firewall-table">
             <thead>
                 <tr>
-                    <th data-sort="name">이름 <span class="sort-icon">↕</span></th>
-                    <th data-sort="type">종류 <span class="sort-icon">↕</span></th>
-                    <th data-sort="ip_address">IP 주소 <span class="sort-icon">↕</span></th>
                     <th>상태</th>
+                    <th data-sort="name">이름 <span class="sort-icon">↕</span></th>
+                    <th data-sort="type">타입 <span class="sort-icon">↕</span></th>
+                    <th data-sort="ip_address">IP <span class="sort-icon">↕</span></th>
                     <th data-sort="last_sync">마지막 동기화 <span class="sort-icon">↕</span></th>
-                    <th data-sort="policy_count">정책 수 <span class="sort-icon">↕</span></th>
                     <th>작업</th>
                 </tr>
             </thead>
             <tbody id="firewallTableBody">
                 {% for firewall in firewalls %}
                 <tr>
+                    <td>
+                        <button class="status-toggle {% if firewall.is_active %}active{% else %}inactive{% endif %}" data-id="{{ firewall.id }}">
+                            {% if firewall.is_active %}활성{% else %}비활성{% endif %}
+                        </button>
+                    </td>
                     <td>{{ firewall.name }}</td>
                     <td>{{ firewall.type_display }}</td>
                     <td>{{ firewall.ip_address }}</td>
-                    <td>
-                        <span class="status {% if firewall.status %}active{% endif %}">
-                            {{ '활성' if firewall.status else '비활성' }}
-                        </span>
-                    </td>
                     <td>
                         <span class="sync-status {{ firewall.sync_status }}">
                             {% if firewall.sync_status == 'syncing' %}
@@ -74,11 +73,26 @@
                             {% endif %}
                         </span>
                     </td>
-                    <td>{{ firewall.policy_count }}</td>
                     <td>
-                        <button class="btn btn-outline btn-sm sync-btn" data-id="{{ firewall.id }}">동기화</button>
-                        <button class="btn btn-outline btn-sm edit-btn" data-id="{{ firewall.id }}">수정</button>
-                        <button class="btn btn-outline btn-sm danger delete-btn" data-id="{{ firewall.id }}">삭제</button>
+                        <div class="btn-group">
+                            <button class="btn btn-icon sync-btn" data-id="{{ firewall.id }}" title="동기화">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M14 8c0 3.314-2.686 6-6 6s-6-2.686-6-6 2.686-6 6-6c1.657 0 3.157.672 4.243 1.757L14 2M14 2v3h-3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-icon edit-btn" data-id="{{ firewall.id }}" title="수정">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-icon danger delete-btn" data-id="{{ firewall.id }}" title="삭제">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h18"/>
+                                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                </svg>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

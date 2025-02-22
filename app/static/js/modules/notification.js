@@ -3,6 +3,16 @@ export const Notification = {
     unreadCount: 0,
 
     initialize() {
+        // localStorage에서 알림 복원
+        const savedNotifications = localStorage.getItem('notifications');
+        if (savedNotifications) {
+            this.notifications = JSON.parse(savedNotifications).map(n => ({
+                ...n,
+                time: new Date(n.time)
+            }));
+            this.updateUnreadCount();
+        }
+
         const notificationBtn = document.getElementById('notificationBtn');
         const notificationMenu = document.querySelector('.notification-menu');
         const clearAllBtn = document.querySelector('.clear-all');
@@ -45,6 +55,12 @@ export const Notification = {
         this.notifications.unshift(notification);
         this.updateUnreadCount();
         this.updateNotificationList();
+        
+        // localStorage에 알림 저장
+        localStorage.setItem('notifications', JSON.stringify(this.notifications.map(n => ({
+            ...n,
+            time: n.time.toISOString()
+        }))));
         
         return notification;
     },
@@ -102,6 +118,12 @@ export const Notification = {
         this.notifications.forEach(n => n.read = true);
         this.updateUnreadCount();
         this.updateNotificationList();
+        
+        // localStorage 업데이트
+        localStorage.setItem('notifications', JSON.stringify(this.notifications.map(n => ({
+            ...n,
+            time: n.time.toISOString()
+        }))));
     },
 
     formatTime(date) {

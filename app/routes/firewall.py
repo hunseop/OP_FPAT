@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from app import db
 from app.models import Firewall
 from app.services.sync_manager import sync_manager
