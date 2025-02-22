@@ -4,13 +4,15 @@ from .firewall_interface import FirewallInterface
 from .paloalto.paloalto_collector import PaloAltoCollector
 from .mf2.mf2_collector import MF2Collector
 from .ngf.ngf_collector import NGFCollector
+from .mock.mock_collector import MockCollector
 
 class FirewallCollectorFactory:
     # 각 방화벽 타입별 필수 파라미터 정의
     REQUIRED_PARAMS: Dict[str, list] = {
         'paloalto': ['hostname', 'username', 'password'],
         'mf2': ['device_ip', 'username', 'password'],
-        'ngf': ['hostname', 'ext_clnt_id', 'ext_clnt_secret']
+        'ngf': ['hostname', 'ext_clnt_id', 'ext_clnt_secret'],
+        'mock': ['hostname', 'username', 'password']  # Mock 방화벽 추가
     }
 
     @staticmethod
@@ -18,7 +20,7 @@ class FirewallCollectorFactory:
         """방화벽 타입에 따른 Collector 객체를 생성하여 반환합니다.
 
         Args:
-            source_type (str): 방화벽 타입 ('paloalto', 'mf2', 'ngf' 중 하나)
+            source_type (str): 방화벽 타입 ('paloalto', 'mf2', 'ngf', 'mock' 중 하나)
             **kwargs: 각 방화벽 타입별 필요한 파라미터
                 - paloalto:
                     - hostname: 장비 호스트명
@@ -32,6 +34,10 @@ class FirewallCollectorFactory:
                     - hostname: 장비 호스트명
                     - ext_clnt_id: 외부 클라이언트 ID
                     - ext_clnt_secret: 외부 클라이언트 시크릿
+                - mock:
+                    - hostname: 가상 호스트명
+                    - username: 가상 계정
+                    - password: 가상 비밀번호
 
         Returns:
             FirewallInterface: 방화벽 타입에 맞는 Collector 객체
@@ -58,6 +64,8 @@ class FirewallCollectorFactory:
             return MF2Collector(kwargs['device_ip'], kwargs['username'], kwargs['password'])
         elif source_type == 'ngf':
             return NGFCollector(kwargs['hostname'], kwargs['ext_clnt_id'], kwargs['ext_clnt_secret'])
+        elif source_type == 'mock':
+            return MockCollector(kwargs['hostname'], kwargs['username'], kwargs['password'])
         
         # 여기까지 오면 안되지만, 혹시 모르니 예외 처리
         raise ValueError(f"알 수 없는 방화벽 모듈 타입: {source_type}")

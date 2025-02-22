@@ -22,39 +22,6 @@ export const UI = {
         });
     },
 
-    showNotification(type, title, message, duration = 5000) {
-        const container = document.getElementById('notificationContainer');
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        
-        notification.innerHTML = `
-            <div class="notification-content">
-                <div class="notification-title">${title}</div>
-                <div class="notification-message">${message}</div>
-            </div>
-            <button class="notification-close">&times;</button>
-        `;
-        
-        container.appendChild(notification);
-        
-        // 닫기 버튼 이벤트
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', () => {
-            notification.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => notification.remove(), 300);
-        });
-        
-        // 자동 제거
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, duration);
-        
-        return notification;
-    },
-
     showError(message, details = []) {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'error-message';

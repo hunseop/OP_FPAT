@@ -33,64 +33,60 @@ class Firewall(db.Model):
         return type_map.get(self.type, self.type.upper())
 
 class SecurityRule(db.Model):
-    """방화벽 보안 규칙을 저장하는 모델"""
+    """보안 규칙 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
     firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False)
-    vsys = db.Column(db.String(50), nullable=True)  # PALOALTO용, 다른 방화벽은 기본값
-    seq = db.Column(db.Integer)
-    name = db.Column(db.String(200))
+    vsys = db.Column(db.String(50))
+    seq = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
     enabled = db.Column(db.Boolean, default=True)
-    action = db.Column(db.String(50))
+    action = db.Column(db.String(20))
     source = db.Column(db.Text)
     user = db.Column(db.Text)
     destination = db.Column(db.Text)
     service = db.Column(db.Text)
     application = db.Column(db.Text)
-    security_profile = db.Column(db.Text, nullable=True)  # PALOALTO의 url_filtering, MF2의 schedule
-    category = db.Column(db.String(200), nullable=True)  # PALOALTO 전용
-    description = db.Column(db.Text, nullable=True)
-    last_hit = db.Column(db.DateTime, nullable=True)  # NGF 전용
+    security_profile = db.Column(db.Text)
+    category = db.Column(db.Text)
+    description = db.Column(db.Text)
+    last_hit = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class NetworkObject(db.Model):
-    """네트워크 객체를 저장하는 모델"""
+    """네트워크 객체 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
     firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False)
-    name = db.Column(db.String(200), nullable=False)
-    type = db.Column(db.String(50))  # ip-netmask, ip-range, fqdn
-    value = db.Column(db.Text)
-    start_ip = db.Column(db.BigInteger, nullable=True)  # IP 주소를 정수로 변환
-    end_ip = db.Column(db.BigInteger, nullable=True)    # IP 범위 끝 주소
+    name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.String(20))  # ip-netmask, ip-range, fqdn
+    value = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class NetworkGroup(db.Model):
-    """네트워크 그룹 객체를 저장하는 모델"""
+    """네트워크 그룹 객체 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
     firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False)
-    name = db.Column(db.String(200), nullable=False)
-    members = db.Column(db.Text)  # 쉼표로 구분된 멤버 목록
+    name = db.Column(db.String(100), nullable=False)
+    members = db.Column(db.Text)  # 콤마로 구분된 멤버 목록
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class ServiceObject(db.Model):
-    """서비스 객체를 저장하는 모델"""
+    """서비스 객체 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
     firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False)
-    name = db.Column(db.String(200), nullable=False)
-    protocol = db.Column(db.String(50))
-    port = db.Column(db.Text)
-    start_port = db.Column(db.Integer, nullable=True)  # 포트 번호 시작
-    end_port = db.Column(db.Integer, nullable=True)    # 포트 번호 끝
+    name = db.Column(db.String(100), nullable=False)
+    protocol = db.Column(db.String(20))  # tcp, udp
+    port = db.Column(db.String(100))  # 포트 범위 또는 단일 포트
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class ServiceGroup(db.Model):
-    """서비스 그룹 객체를 저장하는 모델"""
+    """서비스 그룹 객체 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
     firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False)
-    name = db.Column(db.String(200), nullable=False)
-    members = db.Column(db.Text)  # 쉼표로 구분된 멤버 목록
+    name = db.Column(db.String(100), nullable=False)
+    members = db.Column(db.Text)  # 콤마로 구분된 멤버 목록
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 

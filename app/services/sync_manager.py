@@ -2,7 +2,7 @@ from threading import Thread, Lock
 from queue import Queue
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 import pandas as pd
 from app import app, db
 from app.models import (
@@ -29,6 +29,9 @@ class SyncManager:
                 for firewall in pending_firewalls:
                     firewall.sync_status = 'failed'
                     firewall.last_sync_error = '서버 재시작으로 인한 동기화 중단'
+                    with self._lock:
+                        if firewall.id in self._active_syncs:
+                            del self._active_syncs[firewall.id]
                 db.session.commit()
                 if pending_firewalls:
                     logger.info(f"{len(pending_firewalls)}개의 중단된 동기화 작업 복구 완료")
@@ -52,12 +55,12 @@ class SyncManager:
         logger.info(f"방화벽 {firewall_id} 동기화 시작")
         try:
             with app.app_context():
-                firewall = Firewall.query.get(firewall_id)
-                if not firewall:
-                    logger.error(f"방화벽 {firewall_id}를 찾을 수 없음")
-                    return
-
                 try:
+                    firewall = db.session.get(Firewall, firewall_id)
+                    if not firewall:
+                        logger.error(f"방화벽 {firewall_id}를 찾을 수 없음")
+                        return
+
                     # 상태 초기화
                     with self._lock:
                         self._active_syncs[firewall_id] = {
@@ -178,7 +181,7 @@ class SyncManager:
 
                                 # 동기화 상태 업데이트
                                 firewall.sync_status = 'success'
-                                firewall.last_sync = datetime.utcnow()
+                                firewall.last_sync = datetime.now(UTC)
                                 firewall.last_sync_error = None
                                 
                                 # 트랜잭션 커밋
@@ -200,9 +203,11 @@ class SyncManager:
                     logger.error(f"방화벽 {firewall_id} 동기화 실패: {error_msg}")
                     
                     # 방화벽 상태 업데이트
-                    firewall.sync_status = 'failed'
-                    firewall.last_sync_error = error_msg
-                    db.session.commit()
+                    firewall = db.session.get(Firewall, firewall_id)
+                    if firewall:
+                        firewall.sync_status = 'failed'
+                        firewall.last_sync_error = error_msg
+                        db.session.commit()
                     
                     # active_syncs에서 제거
                     with self._lock:
@@ -224,6 +229,14 @@ class SyncManager:
         with self._lock:
             if firewall_id in self._active_syncs:
                 return False, "이미 동기화가 진행 중입니다."
+            
+            # 상태 초기화
+            self._active_syncs[firewall_id] = {
+                'status': 'syncing',
+                'progress': 0,
+                'start_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
         self._sync_queue.put(firewall_id)
         return True, "동기화가 시작되었습니다."
     

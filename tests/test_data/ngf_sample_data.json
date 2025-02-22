@@ -1,0 +1,63 @@
+{
+    "result": [
+        {
+            "seq": 1,
+            "fw_rule_id": "rule1",
+            "name": "Allow Web",
+            "use": 1,
+            "action": 1,
+            "src": [{"name": "Internal"}],
+            "user": [{"name": "any"}],
+            "dst": [{"name": "External"}],
+            "srv": [{"name": "HTTP"}],
+            "app": [{"name": "Web"}],
+            "last_hit_time": "2024-03-15 10:00:00",
+            "desc": "Allow web traffic"
+        },
+        {
+            "seq": 2,
+            "fw_rule_id": "rule2",
+            "name": "Block P2P",
+            "use": 1,
+            "action": 0,
+            "src": [{"name": "Internal"}],
+            "user": [{"name": "any"}],
+            "dst": [{"name": "any"}],
+            "srv": [{"name": "P2P"}],
+            "app": [{"name": "P2P"}],
+            "last_hit_time": "2024-03-15 11:00:00",
+            "desc": "Block P2P traffic"
+        }
+    ],
+    "objects": {
+        "hosts": [
+            {
+                "addr_obj_id": "1",
+                "name": "Server1",
+                "ip": "192.168.1.100"
+            }
+        ],
+        "networks": [
+            {
+                "addr_obj_id": "2",
+                "name": "Internal_Network",
+                "ip": "192.168.0.0",
+                "mask": "255.255.0.0"
+            }
+        ],
+        "services": [
+            {
+                "srv_obj_id": "1",
+                "name": "HTTP",
+                "protocol": "tcp",
+                "port": "80"
+            },
+            {
+                "srv_obj_id": "2",
+                "name": "HTTPS",
+                "protocol": "tcp",
+                "port": "443"
+            }
+        ]
+    }
+} 

@@ -16,7 +16,7 @@ def validate_firewall_name(name: str) -> Tuple[bool, Optional[str]]:
 
 def validate_firewall_type(type_: str) -> Tuple[bool, Optional[str]]:
     """방화벽 타입 검증"""
-    valid_types = ['ngf', 'mf2', 'paloalto']
+    valid_types = ['ngf', 'mf2', 'paloalto', 'mock']
     if type_.lower() not in valid_types:
         return False, f"유효하지 않은 방화벽 타입입니다. 가능한 값: {', '.join(valid_types)}"
     

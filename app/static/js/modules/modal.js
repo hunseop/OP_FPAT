@@ -17,6 +17,9 @@ export const Modal = {
         const addCard = document.querySelector('.add-card');
         const firewallForm = document.getElementById('firewallForm');
 
+        // 이벤트 핸들러를 인스턴스 메서드로 바인딩
+        this.boundHandleFormSubmit = this.handleFormSubmit.bind(this);
+
         // 이벤트 리스너 등록
         if (addBtn) addBtn.addEventListener('click', () => this.openModal(modal));
         if (uploadBtn) uploadBtn.addEventListener('click', () => this.openModal(uploadModal));
@@ -36,9 +39,10 @@ export const Modal = {
             }
         });
 
-        // 폼 제출 이벤트
-        if (firewallForm) {
-            firewallForm.addEventListener('submit', (e) => this.handleFormSubmit(e, modal));
+        // 폼 제출 이벤트 - 한 번만 등록
+        if (firewallForm && !firewallForm.dataset.initialized) {
+            firewallForm.addEventListener('submit', this.boundHandleFormSubmit);
+            firewallForm.dataset.initialized = 'true';  // 초기화 표시
         }
 
         this.initializeEditButtons();
@@ -60,8 +64,23 @@ export const Modal = {
         }
     },
 
-    async handleFormSubmit(e, modal) {
+    async handleFormSubmit(e) {
         e.preventDefault();
+        e.stopPropagation();
+        
+        const modal = document.getElementById('firewallModal');
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        
+        // 이미 제출 중인지 확인
+        if (submitButton.disabled) {
+            return;
+        }
+        
+        // 제출 버튼 비활성화
+        const originalText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = '처리 중...';
+        
         const formData = new FormData(e.target);
         
         const url = this.isEditMode ? 
@@ -69,19 +88,26 @@ export const Modal = {
             '/firewall/add';
         
         try {
+            console.log('폼 제출 시작:', url);  // 디버깅용 로그
             const response = await fetch(url, {
                 method: 'POST',
                 body: formData
             });
             const data = await response.json();
+            console.log('폼 제출 완료:', data);  // 디버깅용 로그
 
             if (data.success) {
                 location.reload();
             } else {
                 UI.showError(data.error, data.details);
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
             }
         } catch (error) {
+            console.error('폼 제출 에러:', error);  // 디버깅용 로그
             UI.showError('요청 처리 중 오류가 발생했습니다.');
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
         }
     },
 

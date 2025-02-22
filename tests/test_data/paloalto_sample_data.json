@@ -1,0 +1,74 @@
+{
+    "rules": {
+        "entry": [
+            {
+                "@name": "Allow Web",
+                "action": "allow",
+                "from": "trust",
+                "to": "untrust",
+                "source": {
+                    "member": ["Internal"]
+                },
+                "destination": {
+                    "member": ["any"]
+                },
+                "service": {
+                    "member": ["web-browsing"]
+                },
+                "application": {
+                    "member": ["web-browsing"]
+                },
+                "description": "Allow web traffic",
+                "disabled": "no"
+            },
+            {
+                "@name": "Block P2P",
+                "action": "deny",
+                "from": "trust",
+                "to": "untrust",
+                "source": {
+                    "member": ["Internal"]
+                },
+                "destination": {
+                    "member": ["any"]
+                },
+                "service": {
+                    "member": ["application-default"]
+                },
+                "application": {
+                    "member": ["p2p"]
+                },
+                "description": "Block P2P traffic",
+                "disabled": "no"
+            }
+        ]
+    },
+    "objects": {
+        "address": {
+            "entry": [
+                {
+                    "@name": "WebServer",
+                    "ip-netmask": "192.168.1.100"
+                },
+                {
+                    "@name": "Internal",
+                    "ip-netmask": "192.168.0.0/16"
+                }
+            ]
+        },
+        "service": {
+            "entry": [
+                {
+                    "@name": "HTTP",
+                    "protocol": "tcp",
+                    "port": "80"
+                },
+                {
+                    "@name": "HTTPS",
+                    "protocol": "tcp",
+                    "port": "443"
+                }
+            ]
+        }
+    }
+} 

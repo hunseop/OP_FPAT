@@ -28,6 +28,86 @@ export const Firewall = {
         });
     },
 
+    initialize() {
+        this.initializeSync();
+        this.initializeTableSort();
+        this.initializeSearch();
+        this.initializeFilters();
+    },
+
+    initializeTableSort() {
+        const table = document.querySelector('.firewall-table');
+        if (!table) return;
+
+        const headers = table.querySelectorAll('th[data-sort]');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.dataset.sort;
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const isAsc = header.classList.contains('asc');
+
+                // 정렬 방향 표시 업데이트
+                headers.forEach(h => h.classList.remove('asc', 'desc'));
+                header.classList.toggle(isAsc ? 'desc' : 'asc');
+
+                // 데이터 정렬
+                rows.sort((a, b) => {
+                    const aValue = a.querySelector(`td:nth-child(${this._getColumnIndex(column)})`).textContent;
+                    const bValue = b.querySelector(`td:nth-child(${this._getColumnIndex(column)})`).textContent;
+                    return isAsc ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+                });
+
+                // 정렬된 행 다시 삽입
+                tbody.innerHTML = '';
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+    },
+
+    initializeSearch() {
+        const searchInput = document.getElementById('searchInput');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const rows = document.querySelectorAll('#firewallTableBody tr');
+
+            rows.forEach(row => {
+                const name = row.cells[0].textContent.toLowerCase();
+                const ip = row.cells[2].textContent.toLowerCase();
+                const matches = name.includes(searchTerm) || ip.includes(searchTerm);
+                row.style.display = matches ? '' : 'none';
+            });
+        });
+    },
+
+    initializeFilters() {
+        const typeFilter = document.getElementById('typeFilter');
+        if (!typeFilter) return;
+
+        typeFilter.addEventListener('change', () => {
+            const selectedType = typeFilter.value.toLowerCase();
+            const rows = document.querySelectorAll('#firewallTableBody tr');
+
+            rows.forEach(row => {
+                const type = row.cells[1].textContent.toLowerCase();
+                row.style.display = !selectedType || type === selectedType ? '' : 'none';
+            });
+        });
+    },
+
+    _getColumnIndex(column) {
+        const columnMap = {
+            'name': 1,
+            'type': 2,
+            'ip_address': 3,
+            'last_sync': 5,
+            'policy_count': 6
+        };
+        return columnMap[column] || 1;
+    },
+
     async startSync(id, firewallName, statusCell, button, originalText) {
         try {
             const response = await fetch(`/api/firewall/sync/${id}`, {
@@ -48,45 +128,25 @@ export const Firewall = {
     async checkProgress(id, firewallName, statusCell, button, originalText) {
         try {
             const response = await fetch(`/api/firewall/sync/status/${id}`);
-            const progressData = await response.json();
+            const data = await response.json();
 
-            switch (progressData.state) {
-                case 'SUCCESS':
-                    this.handleSyncSuccess(firewallName, statusCell, button, originalText);
-                    break;
-                case 'PROGRESS':
-                    statusCell.innerHTML = `<span class="sync-progress">동기화 중... <span class="progress-value">${progressData.progress}</span>%</span>`;
-                    setTimeout(() => this.checkProgress(id, firewallName, statusCell, button, originalText), 1000);
-                    break;
-                case 'FAILURE':
-                    this.handleSyncError(firewallName, statusCell, button, originalText, progressData.error);
-                    break;
-                case 'PENDING':
-                    statusCell.innerHTML = '<span class="sync-progress">대기 중...</span>';
-                    setTimeout(() => this.checkProgress(id, firewallName, statusCell, button, originalText), 1000);
-                    break;
+            if (data.success) {
+                Notification.addNotification('success', '동기화 완료', `${firewallName} 방화벽 동기화가 완료되었습니다.`);
+                statusCell.innerHTML = data.last_sync;
+                statusCell.className = 'sync-status';
+                button.disabled = false;
+                button.classList.remove('syncing');
+                button.textContent = originalText;
+                setTimeout(() => location.reload(), 1000);
+            } else if (data.status === 'syncing') {
+                statusCell.querySelector('.progress-value').textContent = data.progress || 0;
+                setTimeout(() => this.checkProgress(id, firewallName, statusCell, button, originalText), 1000);
+            } else {
+                this.handleSyncError(firewallName, statusCell, button, originalText, data.error);
             }
         } catch (error) {
             this.handleSyncError(firewallName, statusCell, button, originalText, '상태 확인 중 오류가 발생했습니다.');
         }
-    },
-
-    handleSyncSuccess(firewallName, statusCell, button, originalText) {
-        Notification.addNotification('success', '동기화 완료', `${firewallName} 방화벽 동기화가 완료되었습니다.`);
-        const now = new Date().toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-        statusCell.innerHTML = now;
-        statusCell.className = 'sync-status';
-        button.disabled = false;
-        button.classList.remove('syncing');
-        button.textContent = originalText;
-        setTimeout(() => location.reload(), 1000);
     },
 
     handleSyncError(firewallName, statusCell, button, originalText, error) {

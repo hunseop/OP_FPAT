@@ -1,0 +1,54 @@
+{
+    "rules": [
+        {
+            "seq": 1,
+            "name": "Allow_Web",
+            "enable": true,
+            "action": "accept",
+            "source": "Internal_Network",
+            "destination": "External_Network",
+            "service": "HTTP",
+            "schedule": "Always",
+            "description": "Allow web traffic"
+        },
+        {
+            "seq": 2,
+            "name": "Block_P2P",
+            "enable": true,
+            "action": "drop",
+            "source": "Internal_Network",
+            "destination": "any",
+            "service": "P2P",
+            "schedule": "Always",
+            "description": "Block P2P traffic"
+        }
+    ],
+    "objects": {
+        "hosts": [
+            {
+                "name": "WebServer",
+                "type": "host",
+                "ip": "192.168.1.100"
+            }
+        ],
+        "networks": [
+            {
+                "name": "Internal_Network",
+                "type": "network",
+                "ip": "192.168.0.0/16"
+            }
+        ],
+        "services": [
+            {
+                "name": "HTTP",
+                "protocol": "TCP",
+                "port": "80"
+            },
+            {
+                "name": "HTTPS",
+                "protocol": "TCP",
+                "port": "443"
+            }
+        ]
+    }
+} 

@@ -16,23 +16,30 @@ def index():
 
 @bp.route('/add', methods=['POST'])
 def add_firewall():
-    try:
-        data = {
-            'name': request.form.get('name'),
-            'type': request.form.get('type'),
-            'ip_address': request.form.get('ip'),
-            'username': request.form.get('username'),
-            'password': request.form.get('password')
-        }
-        
-        is_valid, errors = validate_firewall_data(data)
-        if not is_valid:
-            return jsonify({
-                'success': False,
-                'error': '입력값 검증 실패',
-                'details': errors
-            })
+    if not request.form:
+        return jsonify({
+            'success': False,
+            'error': '요청 데이터가 없습니다.'
+        })
 
+    data = {
+        'name': request.form.get('name'),
+        'type': request.form.get('type'),
+        'ip_address': request.form.get('ip'),
+        'username': request.form.get('username'),
+        'password': request.form.get('password')
+    }
+    
+    is_valid, errors = validate_firewall_data(data)
+    if not is_valid:
+        return jsonify({
+            'success': False,
+            'error': '입력값 검증 실패',
+            'details': errors
+        })
+
+    try:
+        # 세션 시작 전에 중복 체크
         existing_firewall = Firewall.query.filter(
             (Firewall.name == data['name']) | 
             (Firewall.ip_address == data['ip_address'])
@@ -45,6 +52,7 @@ def add_firewall():
                 'details': ['동일한 이름 또는 IP 주소를 가진 방화벽이 이미 존재합니다.']
             })
 
+        # 새 방화벽 생성
         new_firewall = Firewall(
             name=data['name'],
             type=data['type'].lower(),
@@ -52,13 +60,20 @@ def add_firewall():
             username=data['username'],
             password=data['password']
         )
+        
         db.session.add(new_firewall)
         db.session.commit()
-        
+
         return jsonify({'success': True})
+        
     except Exception as e:
         db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
+        current_app.logger.error(f"방화벽 등록 중 오류 발생: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': '방화벽 등록 중 오류가 발생했습니다.',
+            'details': [str(e)]
+        })
 
 @bp.route('/delete/<int:id>', methods=['POST'])
 def delete_firewall(id):
