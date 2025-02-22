@@ -1,0 +1,144 @@
+/* 방화벽 관리 페이지 */
+.firewall-management {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* 방화벽 테이블 */
+.firewall-table {
+    width: 100%;
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
+}
+
+.firewall-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.firewall-table th,
+.firewall-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: var(--font-sm);
+}
+
+.firewall-table th {
+    background: rgba(0, 0, 0, 0.02);
+    font-weight: 500;
+    color: var(--text-color);
+    position: relative;
+    cursor: pointer;
+}
+
+.firewall-table th .sort-icon {
+    margin-left: var(--spacing-sm);
+    opacity: 0.5;
+}
+
+.firewall-table th:hover .sort-icon {
+    opacity: 1;
+}
+
+.firewall-table tbody tr:hover {
+    background: rgba(0, 0, 0, 0.01);
+}
+
+/* 상태 표시 */
+.status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status.active {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.status:not(.active) {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* 동기화 상태 */
+.sync-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-sm);
+}
+
+.sync-status.syncing {
+    color: #2563eb;
+}
+
+.sync-status.failed {
+    color: #dc2626;
+}
+
+.sync-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.error-tooltip {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #b91c1c;
+    cursor: help;
+    margin-left: var(--spacing-sm);
+}
+
+/* 버튼 스타일 */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: var(--font-sm);
+}
+
+.btn.danger {
+    color: #dc2626;
+    border-color: #fee2e2;
+}
+
+.btn.danger:hover {
+    background: #fee2e2;
+}
+
+.sync-btn.syncing {
+    position: relative;
+    color: transparent;
+}
+
+.sync-btn.syncing::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #2563eb;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+} 

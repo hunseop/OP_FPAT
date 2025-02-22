@@ -1,0 +1,106 @@
+/* 모달 스타일 */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;  /* top, right, bottom, left를 한번에 0으로 설정 */
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--background-color);
+    border-radius: var(--border-radius);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    z-index: 1001;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+.modal-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+.form-group {
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--glass-background);
+    font-size: var(--font-sm);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: var(--font-lg);
+    cursor: pointer;
+    color: var(--text-light);
+    padding: var(--spacing-sm);
+    transition: color 0.2s;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: var(--text-color);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+} 

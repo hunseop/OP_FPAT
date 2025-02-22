@@ -1,4 +1,15 @@
+import { UI } from './modules/ui.js';
+import { Firewall } from './modules/firewall.js';
+import { Modal } from './modules/modal.js';
+import { Notification } from './modules/notification.js';
+
 document.addEventListener('DOMContentLoaded', function() {
+    // UI 초기화
+    UI.initializeNavigation();
+
+    // 알림 시스템 초기화
+    Notification.initialize();
+
     // 현재 활성화된 메뉴 아이템 강조
     const currentPath = window.location.pathname;
     const navItems = document.querySelectorAll('.nav-item');
@@ -13,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const notificationBtn = document.getElementById('notificationBtn');
     if (notificationBtn) {
         notificationBtn.addEventListener('click', function() {
-            // 알림 기능 구현
             console.log('알림 버튼 클릭됨');
         });
     }
@@ -22,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const settingsBtn = document.getElementById('settingsBtn');
     if (settingsBtn) {
         settingsBtn.addEventListener('click', function() {
-            // 설정 기능 구현
             console.log('설정 버튼 클릭됨');
         });
     }
@@ -37,6 +46,12 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.transform = 'translateX(0)';
         });
     });
+
+    // 방화벽 관련 기능 초기화
+    Firewall.initializeSync();
+
+    // 모달 관련 기능 초기화
+    Modal.initialize();
 
     // 모달 관련 요소
     const modal = document.getElementById('firewallModal');
