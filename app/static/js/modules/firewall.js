@@ -32,26 +32,50 @@ export const Firewall = {
 
     initializeSearch() {
         const searchInput = document.getElementById('searchInput');
+        const typeFilter = document.getElementById('typeFilter');
         if (!searchInput) return;
 
-        searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
+        let debounceTimer;
+
+        const performSearch = () => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedType = typeFilter.value.toLowerCase();
             const tbody = document.getElementById('firewallTableBody');
             const rows = tbody.getElementsByTagName('tr');
 
             Array.from(rows).forEach(row => {
                 const nameCell = row.cells[1];  // 이름 컬럼
+                const typeCell = row.cells[2];  // 타입 컬럼
                 const ipCell = row.cells[3];    // IP 컬럼
+                
                 const name = nameCell.textContent.toLowerCase();
+                const type = typeCell.textContent.toLowerCase();
                 const ip = ipCell.textContent.toLowerCase();
 
-                if (name.includes(searchTerm) || ip.includes(searchTerm)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                const matchesSearch = name.includes(searchTerm) || 
+                                    ip.includes(searchTerm);
+                const matchesType = !selectedType || type.includes(selectedType);
+
+                row.style.display = (matchesSearch && matchesType) ? '' : 'none';
             });
+        };
+
+        // 검색어 입력 시 디바운스 적용
+        searchInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(performSearch, 300);
         });
+
+        // 엔터 키 입력 시 즉시 검색
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                clearTimeout(debounceTimer);
+                performSearch();
+            }
+        });
+
+        // 검색창 클리어 버튼 클릭 시
+        searchInput.addEventListener('search', performSearch);
     },
 
     initializeFilters() {
@@ -59,13 +83,10 @@ export const Firewall = {
         if (!typeFilter) return;
 
         typeFilter.addEventListener('change', () => {
-            const selectedType = typeFilter.value.toLowerCase();
-            const rows = document.querySelectorAll('#firewallTableBody tr');
-
-            rows.forEach(row => {
-                const type = row.cells[1].textContent.toLowerCase();
-                row.style.display = !selectedType || type === selectedType ? '' : 'none';
-            });
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                this.initializeSearch();
+            }
         });
     },
 
