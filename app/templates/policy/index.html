@@ -5,49 +5,118 @@
     <div class="page-header">
         <h2>정책 관리</h2>
         <div class="header-actions">
-            <button class="btn btn-primary">새 정책 추가</button>
+            <button class="btn btn-outline" id="exportBtn">엑셀 추출</button>
         </div>
     </div>
 
-    <div class="filter-bar">
-        <div class="search-box">
-            <input type="text" placeholder="정책 검색...">
+    <div class="filter-section">
+        <div class="filter-list" id="filterList">
+            <!-- 필터 조건들이 여기에 동적으로 추가됨 -->
         </div>
-        <div class="filter-actions">
-            <select>
-                <option>모든 상태</option>
-                <option>활성</option>
-                <option>비활성</option>
-            </select>
-            <button class="btn btn-outline">필터</button>
+        <button class="btn btn-outline" id="addFilterBtn">
+            <span>필터 추가</span>
+        </button>
+    </div>
+
+    <div class="table-container">
+        <div class="policy-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th data-sort="firewall_name">방화벽</th>
+                        <th data-sort="seq">순서</th>
+                        <th data-sort="name">이름</th>
+                        <th data-sort="enabled">상태</th>
+                        <th data-sort="action">동작</th>
+                        <th>출발지</th>
+                        <th>사용자</th>
+                        <th>목적지</th>
+                        <th>서비스</th>
+                        <th>애플리케이션</th>
+                        <th>보안 프로필</th>
+                        <th>카테고리</th>
+                        <th data-sort="last_hit">마지막 적중</th>
+                        <th>설명</th>
+                    </tr>
+                </thead>
+                <tbody id="policyTableBody">
+                    <!-- 정책 목록이 여기에 동적으로 추가됨 -->
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="policy-table">
-        <table>
-            <thead>
-                <tr>
-                    <th>정책 ID</th>
-                    <th>이름</th>
-                    <th>상태</th>
-                    <th>마지막 수정</th>
-                    <th>작업</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>POL-001</td>
-                    <td>기본 접근 정책</td>
-                    <td><span class="badge active">활성</span></td>
-                    <td>2024-03-15</td>
-                    <td>
-                        <button class="btn-icon">수정</button>
-                        <button class="btn-icon">삭제</button>
-                    </td>
-                </tr>
-                <!-- 더미 데이터 추가 -->
-            </tbody>
-        </table>
+    <div class="pagination">
+        <button class="btn btn-outline" id="prevPage" disabled>이전</button>
+        <span class="page-info">
+            <span id="currentPage">1</span> / <span id="totalPages">1</span>
+            (총 <span id="totalItems">0</span>개)
+        </span>
+        <button class="btn btn-outline" id="nextPage" disabled>다음</button>
+        <select id="perPage">
+            <option value="50">50개씩</option>
+            <option value="100">100개씩</option>
+            <option value="200">200개씩</option>
+        </select>
     </div>
 </div>
+
+<!-- 필터 추가 모달 -->
+<div class="modal" id="filterModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>필터 추가</h3>
+            <button class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="filterColumn">필터 대상</label>
+                <select id="filterColumn">
+                    <option value="firewall_name">방화벽</option>
+                    <option value="name">이름</option>
+                    <option value="enabled">상태</option>
+                    <option value="action">동작</option>
+                    <option value="source">출발지</option>
+                    <option value="user">사용자</option>
+                    <option value="destination">목적지</option>
+                    <option value="service">서비스</option>
+                    <option value="application">애플리케이션</option>
+                    <option value="security_profile">보안 프로필</option>
+                    <option value="category">카테고리</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="filterOperator">조건</label>
+                <select id="filterOperator">
+                    <option value="contains">포함</option>
+                    <option value="equals">일치</option>
+                    <option value="starts">시작</option>
+                    <option value="ends">끝</option>
+                </select>
+            </div>
+            <div class="form-group" id="filterValueGroup">
+                <label for="filterValue">값</label>
+                <input type="text" id="filterValue" placeholder="필터 값 입력">
+            </div>
+            <div class="form-group" id="filterSelectGroup" style="display: none;">
+                <label for="filterSelect">값</label>
+                <select id="filterSelect">
+                    <option value="">선택하세요</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="cancelFilterBtn">취소</button>
+                <button type="button" class="btn btn-primary" id="addFilterConditionBtn">추가</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { Policy } from '/static/js/modules/policy.js';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        Policy.initialize();
+    });
+</script>
 {% endblock %}

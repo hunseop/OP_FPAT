@@ -3,6 +3,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
+    height: 100%;  /* 부모 높이 상속 */
+    min-height: 0;  /* flex 컨테이너 내에서 스크롤 허용 */
 }
 
 /* 페이지 헤더 */
@@ -10,7 +12,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    flex-shrink: 0;  /* 헤더 크기 고정 */
 }
 
 .page-header h2 {
@@ -19,104 +22,223 @@
     color: var(--text-color);
 }
 
-/* 필터 바 */
-.filter-bar {
+/* 필터 섹션 */
+.filter-section {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     gap: var(--spacing-md);
     background: var(--glass-background);
     padding: var(--spacing-md);
     border-radius: var(--border-radius);
     border: 1px solid var(--glass-border);
+    flex-shrink: 0;  /* 필터 섹션 크기 고정 */
+    margin-bottom: var(--spacing-md);
 }
 
-.search-box {
-    flex: 1;
-}
-
-.search-box input {
-    width: 100%;
-    padding: var(--spacing-sm);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: var(--font-sm);
-    background: white;
-}
-
-.search-box input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.filter-actions {
+.filter-list {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-sm);
 }
 
-.filter-actions select {
-    padding: var(--spacing-sm);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: var(--font-sm);
+.filter-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
     background: white;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.filter-item .remove-filter {
     cursor: pointer;
+    color: var(--text-light);
+    padding: 2px;
+}
+
+.filter-item .remove-filter:hover {
+    color: #dc2626;
+}
+
+/* 테이블 컨테이너 */
+.table-container {
+    flex: 1;  /* 남은 공간 모두 사용 */
+    min-height: 0;  /* 스크롤을 위한 설정 */
+    overflow: auto;  /* 가로/세로 스크롤 모두 활성화 */
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
 }
 
 /* 정책 테이블 */
 .policy-table {
-    background: var(--glass-background);
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    box-shadow: var(--glass-shadow);
+    width: 100%;
+    min-width: 2000px;  /* 테이블 최소 너비 */
 }
 
 .policy-table table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
-.policy-table th,
-.policy-table td {
-    padding: var(--spacing-md);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
+.policy-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--glass-background);
+    backdrop-filter: blur(10px);
 }
 
 .policy-table th {
-    background: rgba(0, 0, 0, 0.02);
+    position: sticky;  /* 헤더 고정 */
+    top: 0;  /* 헤더 고정 */
+    background: var(--glass-background);  /* 헤더 배경 */
+    padding: var(--spacing-md);
     font-weight: 500;
-    color: var(--text-color);
-    font-size: var(--font-sm);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
 }
 
 .policy-table td {
-    font-size: var(--font-sm);
-    color: var(--text-color);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;  /* 각 셀 최대 너비 */
 }
 
-.policy-table tr:hover {
-    background: rgba(0, 0, 0, 0.01);
+/* 각 컬럼별 너비 설정 */
+.policy-table th:nth-child(1),  /* 방화벽 */
+.policy-table td:nth-child(1) {
+    min-width: 150px;
 }
 
-/* 상태 배지 */
+.policy-table th:nth-child(2),  /* 순서 */
+.policy-table td:nth-child(2) {
+    min-width: 80px;
+}
+
+.policy-table th:nth-child(3),  /* 이름 */
+.policy-table td:nth-child(3) {
+    min-width: 200px;
+}
+
+.policy-table th:nth-child(4),  /* 상태 */
+.policy-table td:nth-child(4) {
+    min-width: 100px;
+}
+
+.policy-table th:nth-child(5),  /* 동작 */
+.policy-table td:nth-child(5) {
+    min-width: 100px;
+}
+
+.policy-table th:nth-child(6),  /* 출발지 */
+.policy-table td:nth-child(6),
+.policy-table th:nth-child(8),  /* 목적지 */
+.policy-table td:nth-child(8) {
+    min-width: 200px;
+}
+
+.policy-table th:nth-child(7),  /* 사용자 */
+.policy-table td:nth-child(7) {
+    min-width: 150px;
+}
+
+.policy-table th:nth-child(9),  /* 서비스 */
+.policy-table td:nth-child(9) {
+    min-width: 150px;
+}
+
+.policy-table th:nth-child(10),  /* 애플리케이션 */
+.policy-table td:nth-child(10) {
+    min-width: 150px;
+}
+
+.policy-table th:nth-child(11),  /* 보안 프로필 */
+.policy-table td:nth-child(11) {
+    min-width: 150px;
+}
+
+.policy-table th:nth-child(12),  /* 카테고리 */
+.policy-table td:nth-child(12) {
+    min-width: 120px;
+}
+
+.policy-table th:nth-child(13),  /* 마지막 적중 */
+.policy-table td:nth-child(13) {
+    min-width: 150px;
+}
+
+.policy-table th:nth-child(14),  /* 설명 */
+.policy-table td:nth-child(14) {
+    min-width: 200px;
+}
+
+/* 상태 뱃지 */
 .badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.25rem 0.5rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: var(--font-sm);
     font-weight: 500;
 }
 
 .badge.active {
     background: #dcfce7;
-    color: #15803d;
+    color: #166534;
 }
 
 .badge.inactive {
     background: #fee2e2;
-    color: #b91c1c;
+    color: #991b1b;
+}
+
+/* 페이지네이션 */
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    justify-content: center;
+    padding: var(--spacing-md);
+    background: var(--glass-background);
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;  /* 페이지네이션 크기 고정 */
+    margin-top: auto;  /* 하단에 고정 */
+}
+
+.page-info {
+    font-size: var(--font-sm);
+    color: var(--text-light);
+}
+
+/* 스크롤바 스타일링 */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--glass-background);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
 }
 
 /* 작업 버튼 */

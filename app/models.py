@@ -36,12 +36,12 @@ class Firewall(db.Model):
 class SecurityRule(db.Model):
     """보안 규칙 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
-    firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False)
-    vsys = db.Column(db.String(50))
-    seq = db.Column(db.Integer, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    enabled = db.Column(db.Boolean, default=True)
-    action = db.Column(db.String(20))
+    firewall_id = db.Column(db.Integer, db.ForeignKey('firewall.id'), nullable=False, index=True)
+    vsys = db.Column(db.String(50), index=True)
+    seq = db.Column(db.Integer, nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False, index=True)
+    enabled = db.Column(db.Boolean, default=True, index=True)
+    action = db.Column(db.String(20), index=True)
     source = db.Column(db.Text)
     user = db.Column(db.Text)
     destination = db.Column(db.Text)
@@ -50,7 +50,7 @@ class SecurityRule(db.Model):
     security_profile = db.Column(db.Text)
     category = db.Column(db.Text)
     description = db.Column(db.Text)
-    last_hit = db.Column(db.DateTime)
+    last_hit = db.Column(db.DateTime, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
