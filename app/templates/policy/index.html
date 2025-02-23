@@ -12,10 +12,16 @@
     <div class="filter-section">
         <div class="filter-list" id="filterList">
             <!-- 필터 조건들이 여기에 동적으로 추가됨 -->
+            <div class="filter-empty">적용된 필터가 없습니다</div>
         </div>
-        <button class="btn btn-outline" id="addFilterBtn">
-            <span>필터 추가</span>
-        </button>
+        <div class="filter-actions">
+            <button class="btn btn-outline" id="addFilterBtn">
+                <span>필터 추가</span>
+            </button>
+            <button class="btn btn-outline" id="resetFilterBtn">
+                <span>필터 초기화</span>
+            </button>
+        </div>
     </div>
 
     <div class="table-container">

@@ -32,33 +32,57 @@
     border-radius: var(--border-radius);
     border: 1px solid var(--glass-border);
     flex-shrink: 0;  /* 필터 섹션 크기 고정 */
-    margin-bottom: var(--spacing-md);
+}
+
+.filter-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.filter-actions .btn {
+    padding: 6px 12px;
+    font-size: 13px;
+    height: 32px;
 }
 
 .filter-list {
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-sm);
+    min-height: 32px;
 }
 
 .filter-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    background: white;
-    padding: var(--spacing-sm);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
+    gap: 4px;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
 }
 
 .filter-item .remove-filter {
-    cursor: pointer;
+    background: none;
+    border: none;
     color: var(--text-light);
+    cursor: pointer;
     padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .filter-item .remove-filter:hover {
-    color: #dc2626;
+    color: var(--text-color);
+}
+
+/* 필터가 없을 때 표시할 메시지 */
+.filter-empty {
+    color: var(--text-light);
+    font-size: 13px;
+    padding: 4px 8px;
 }
 
 /* 테이블 컨테이너 */

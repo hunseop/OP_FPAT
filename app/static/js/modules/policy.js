@@ -8,26 +8,79 @@ export const Policy = {
     sortDesc: false,
 
     initialize() {
+        this.loadStateFromStorage();
         this.initializeFilters();
         this.initializeSorting();
         this.initializePagination();
         this.initializeExport();
         this.loadPolicies();
+
+        // 페이지 언로드 시 상태 저장
+        window.addEventListener('beforeunload', () => {
+            this.saveStateToStorage();
+        });
+    },
+
+    loadStateFromStorage() {
+        const savedState = localStorage.getItem('policyState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+            this.filters = state.filters || [];
+            this.currentPage = state.currentPage || 1;
+            this.perPage = state.perPage || 50;
+            this.sortBy = state.sortBy || 'seq';
+            this.sortDesc = state.sortDesc || false;
+        }
+    },
+
+    saveStateToStorage() {
+        const state = {
+            filters: this.filters,
+            currentPage: this.currentPage,
+            perPage: this.perPage,
+            sortBy: this.sortBy,
+            sortDesc: this.sortDesc
+        };
+        localStorage.setItem('policyState', JSON.stringify(state));
     },
 
     initializeFilters() {
         const addFilterBtn = document.getElementById('addFilterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
         const filterModal = document.getElementById('filterModal');
         const closeBtn = filterModal.querySelector('.close-btn');
-        const cancelBtn = document.getElementById('cancelFilterBtn');
+        const cancelFilterBtn = document.getElementById('cancelFilterBtn');
         const addFilterConditionBtn = document.getElementById('addFilterConditionBtn');
         const filterColumn = document.getElementById('filterColumn');
-        const filterValue = document.getElementById('filterValue');
+        const filterOperator = document.getElementById('filterOperator');
         const filterValueGroup = document.getElementById('filterValueGroup');
         const filterSelectGroup = document.getElementById('filterSelectGroup');
+        const filterValue = document.getElementById('filterValue');
         const filterSelect = document.getElementById('filterSelect');
 
-        // 필터 컬럼 변경 시 입력 방식 업데이트
+        // 필터 모달 이벤트
+        addFilterBtn.addEventListener('click', () => {
+            filterModal.classList.add('active');
+            this.resetFilterModal(filterValueGroup, filterSelectGroup, filterValue);
+        });
+
+        closeBtn.addEventListener('click', () => {
+            filterModal.classList.remove('active');
+        });
+
+        cancelFilterBtn.addEventListener('click', () => {
+            filterModal.classList.remove('active');
+        });
+
+        // 필터 초기화 버튼 이벤트
+        resetFilterBtn.addEventListener('click', () => {
+            this.filters = [];
+            this.currentPage = 1;
+            this.updateFilterDisplay();
+            this.loadPolicies();
+        });
+
+        // 필터 컬럼 변경 이벤트
         filterColumn.addEventListener('change', () => {
             const column = filterColumn.value;
             if (column === 'enabled') {
@@ -38,8 +91,8 @@ export const Policy = {
                     <option value="활성">활성</option>
                     <option value="비활성">비활성</option>
                 `;
-                document.getElementById('filterOperator').value = 'equals';
-                document.getElementById('filterOperator').disabled = true;
+                filterOperator.value = 'equals';
+                filterOperator.disabled = true;
             } else if (column === 'action') {
                 filterValueGroup.style.display = 'none';
                 filterSelectGroup.style.display = 'block';
@@ -48,58 +101,33 @@ export const Policy = {
                     <option value="허용">허용</option>
                     <option value="차단">차단</option>
                 `;
-                document.getElementById('filterOperator').value = 'equals';
-                document.getElementById('filterOperator').disabled = true;
+                filterOperator.value = 'equals';
+                filterOperator.disabled = true;
             } else {
                 filterValueGroup.style.display = 'block';
                 filterSelectGroup.style.display = 'none';
-                document.getElementById('filterOperator').disabled = false;
-                filterValue.placeholder = "필터 값 입력";
+                filterOperator.disabled = false;
             }
         });
 
-        // 필터 추가 버튼 클릭
-        addFilterBtn.addEventListener('click', () => {
-            filterModal.classList.add('active');
-            // 초기 상태 설정
-            const column = filterColumn.value;
-            filterColumn.dispatchEvent(new Event('change'));
-        });
-
-        // 모달 닫기
-        closeBtn.addEventListener('click', () => {
-            this.resetFilterModal(filterValueGroup, filterSelectGroup, filterValue);
-            filterModal.classList.remove('active');
-        });
-
-        cancelBtn.addEventListener('click', () => {
-            this.resetFilterModal(filterValueGroup, filterSelectGroup, filterValue);
-            filterModal.classList.remove('active');
-        });
-
-        // 필터 조건 추가
+        // 필터 추가 버튼 이벤트
         addFilterConditionBtn.addEventListener('click', () => {
             const column = filterColumn.value;
-            const operator = document.getElementById('filterOperator').value;
-            const value = column === 'enabled' || column === 'action' 
-                ? filterSelect.value 
-                : filterValue.value;
+            const operator = filterOperator.value;
+            const value = column === 'enabled' || column === 'action' ? 
+                filterSelect.value : filterValue.value;
 
-            if (value.trim()) {
-                this.addFilter(column, operator, value);
-                this.resetFilterModal(filterValueGroup, filterSelectGroup, filterValue);
-                filterModal.classList.remove('active');
+            if (!value) {
+                alert('필터 값을 입력해주세요.');
+                return;
             }
+
+            this.addFilter(column, operator, value);
+            filterModal.classList.remove('active');
         });
 
-        // 필터 목록 클릭 이벤트 (삭제)
-        document.getElementById('filterList').addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-filter')) {
-                const filterItem = e.target.closest('.filter-item');
-                const index = parseInt(filterItem.dataset.index);
-                this.removeFilter(index);
-            }
-        });
+        // 초기 필터 표시
+        this.updateFilterDisplay();
     },
 
     resetFilterModal(filterValueGroup, filterSelectGroup, filterValue) {
@@ -146,36 +174,37 @@ export const Policy = {
 
     updateFilterDisplay() {
         const filterList = document.getElementById('filterList');
-        filterList.innerHTML = '';
+        const filterEmpty = filterList.querySelector('.filter-empty');
+        
+        // 기존 필터 항목 제거 (empty 메시지 제외)
+        Array.from(filterList.children)
+            .filter(child => !child.classList.contains('filter-empty'))
+            .forEach(child => child.remove());
+
+        if (this.filters.length === 0) {
+            filterEmpty.style.display = 'block';
+            return;
+        }
+
+        filterEmpty.style.display = 'none';
+        
+        // 필터 항목 추가
         this.filters.forEach((filter, index) => {
-            const columnNames = {
-                'firewall_name': '방화벽',
-                'name': '이름',
-                'enabled': '상태',
-                'action': '동작',
-                'source': '출발지',
-                'user': '사용자',
-                'destination': '목적지',
-                'service': '서비스',
-                'application': '애플리케이션',
-                'security_profile': '보안 프로필',
-                'category': '카테고리'
-            };
-
-            const operatorNames = {
-                'contains': '포함',
-                'equals': '일치',
-                'starts': '시작',
-                'ends': '끝'
-            };
-
             const filterItem = document.createElement('div');
             filterItem.className = 'filter-item';
-            filterItem.dataset.index = index;
+            
+            const columnName = document.querySelector(`#filterColumn option[value="${filter.column}"]`).textContent;
+            const operatorName = document.querySelector(`#filterOperator option[value="${filter.operator}"]`).textContent;
+            
             filterItem.innerHTML = `
-                <span>${columnNames[filter.column]} ${operatorNames[filter.operator]} "${filter.value}"</span>
-                <span class="remove-filter">&times;</span>
+                <span>${columnName} ${operatorName} ${filter.value}</span>
+                <button class="remove-filter" data-index="${index}">&times;</button>
             `;
+            
+            filterItem.querySelector('.remove-filter').addEventListener('click', () => {
+                this.removeFilter(index);
+            });
+            
             filterList.appendChild(filterItem);
         });
     },
