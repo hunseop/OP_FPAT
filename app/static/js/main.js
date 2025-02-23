@@ -24,14 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 설정 버튼 클릭 이벤트
-    const settingsBtn = document.getElementById('settingsBtn');
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', function() {
-            console.log('설정 버튼 클릭됨');
-        });
-    }
-
     // 사이드바 메뉴 아이템 호버 효과
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {

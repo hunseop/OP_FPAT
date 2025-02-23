@@ -100,6 +100,7 @@
 /* 알림 드롭다운 */
 .notification-dropdown {
     position: relative;
+    width: 100%;
 }
 
 .notification-badge {
@@ -115,19 +116,38 @@
     text-align: center;
 }
 
+.action-button {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-light);
+    cursor: pointer;
+    padding: var(--spacing-md);
+    font-size: var(--font-sm);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-button:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--text-color);
+}
+
 .notification-menu {
     display: none;
     position: absolute;
-    top: 100%;
-    right: 0;
-    width: 300px;
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: 100%;
     background: var(--glass-background);
     backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border);
     border-radius: var(--border-radius);
     box-shadow: var(--glass-shadow);
     z-index: 1000;
-    margin-top: 10px;
 }
 
 .notification-menu.active {

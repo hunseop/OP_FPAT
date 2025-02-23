@@ -16,7 +16,8 @@
     border-right: 1px solid var(--border-color);
     z-index: 10;
     height: 100vh;  /* 전체 높이 사용 */
-    overflow-y: auto;  /* 필요시 스크롤 */
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar-header {
@@ -27,6 +28,10 @@
     font-size: var(--font-lg);
     font-weight: bold;
     color: var(--primary-color);
+}
+
+.sidebar-nav {
+    flex: 1;
 }
 
 .sidebar-nav ul {
@@ -58,6 +63,13 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* 사이드바 푸터 */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
 /* 메인 컨텐츠 */
 .main-content {
     display: flex;
@@ -66,51 +78,10 @@
     overflow: hidden;  /* 내부 스크롤을 위해 필요 */
 }
 
-.main-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
-    background: var(--glass-background);
-    backdrop-filter: blur(10px);
-    flex-shrink: 0;  /* 헤더 크기 고정 */
-    height: var(--header-height);  /* 헤더 높이 고정 */
-    z-index: 5;
-}
-
-.breadcrumb {
-    font-size: var(--font-sm);
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-.header-actions {
-    display: flex;
-    gap: var(--spacing-md);
-}
-
-.action-button {
-    background: none;
-    border: none;
-    color: var(--text-light);
-    cursor: pointer;
-    padding: var(--spacing-sm);
-    font-size: var(--font-sm);
-    transition: color 0.2s;
-}
-
-.action-button:hover {
-    color: var(--text-color);
-}
-
 /* 컨텐츠 영역 */
 .content {
     flex: 1;  /* 남은 공간 모두 사용 */
-    overflow: hidden;  /* 내부 스크롤을 위해 필요 */
+    overflow: auto;
     padding: var(--spacing-lg);
     background: var(--background-color);
-    display: flex;
-    flex-direction: column;
-    min-height: 0;  /* flex 컨테이너 내에서 스크롤 허용 */
 } 
