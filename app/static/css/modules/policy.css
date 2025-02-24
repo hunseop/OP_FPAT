@@ -99,7 +99,11 @@
 
 /* 정책 테이블 */
 .policy-table {
-    composes: data-table;
+    width: 100%;
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
     min-width: 2000px;
 }
 

@@ -85,7 +85,11 @@
 
 /* 방화벽 테이블 */
 .firewall-table {
-    composes: data-table;
+    width: 100%;
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
 }
 
 .firewall-table table {
