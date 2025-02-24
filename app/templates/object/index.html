@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="object-management">
+    <div class="page-header">
+        <h2>객체 관리</h2>
+    </div>
+
+    <div class="filter-section">
+        <div class="filter-actions">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="객체 이름 또는 값으로 검색...">
+            </div>
+            <select id="objectTypeFilter">
+                <option value="">모든 유형</option>
+                <option value="network">네트워크</option>
+                <option value="network_group">네트워크 그룹</option>
+                <option value="service">서비스</option>
+                <option value="service_group">서비스 그룹</option>
+            </select>
+            <select id="firewallFilter">
+                <option value="">모든 방화벽</option>
+                {% for firewall in firewalls %}
+                <option value="{{ firewall.id }}">{{ firewall.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="object-table">
+            <thead>
+                <tr>
+                    <th data-sort="name">이름</th>
+                    <th data-sort="type">유형</th>
+                    <th data-sort="firewall_name">방화벽</th>
+                    <th>값</th>
+                </tr>
+            </thead>
+            <tbody id="objectTableBody">
+                <!-- 객체 목록이 여기에 동적으로 추가됨 -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        <button class="btn btn-outline" id="prevPage" disabled>이전</button>
+        <span class="page-info">
+            <span id="currentPage">1</span> / <span id="totalPages">1</span>
+            (총 <span id="totalItems">0</span>개)
+        </span>
+        <button class="btn btn-outline" id="nextPage" disabled>다음</button>
+        <select id="perPage">
+            <option value="50">50개씩</option>
+            <option value="100">100개씩</option>
+            <option value="200">200개씩</option>
+        </select>
+    </div>
+</div>
+
+<script type="module">
+    import { Object } from '/static/js/modules/object.js';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        Object.initialize();
+    });
+</script>
+{% endblock %} 

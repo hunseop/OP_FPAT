@@ -1,0 +1,171 @@
+/* 객체 관리 페이지 */
+.object-management {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    height: 100%;
+    min-height: 0;
+}
+
+/* 필터 섹션 */
+.filter-section {
+    background: var(--glass-background);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--glass-border);
+}
+
+.filter-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.filter-actions .search-box {
+    flex: 1;
+    max-width: 300px;
+}
+
+.filter-actions select {
+    min-width: 150px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: white;
+    color: var(--text-color);
+    font-size: var(--font-sm);
+}
+
+/* 테이블 컨테이너 */
+.table-container {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--glass-border);
+}
+
+/* 객체 테이블 */
+.object-table {
+    width: 100%;
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
+}
+
+.object-table table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.object-table th,
+.object-table td {
+    padding: var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.object-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.object-table th:hover {
+    background: #f1f5f9;
+}
+
+.object-table tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+/* 객체 타입 배지 */
+.type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: var(--font-sm);
+    font-weight: 500;
+}
+
+.type-badge.network {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.type-badge.network_group {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.type-badge.service {
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.type-badge.service_group {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* 객체 값 스타일 */
+.object-value {
+    font-family: monospace;
+    background: rgba(0, 0, 0, 0.02);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* 페이지네이션 */
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    justify-content: center;
+    padding: var(--spacing-md);
+    background: var(--glass-background);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--glass-border);
+}
+
+.page-info {
+    font-size: var(--font-sm);
+    color: var(--text-light);
+}
+
+.pagination select {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: white;
+    color: var(--text-color);
+    font-size: var(--font-sm);
+}
+
+/* 스크롤바 스타일링 */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--glass-background);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+} 

@@ -36,6 +36,11 @@
                             방화벽 관리
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ url_for('object.index') }}" class="nav-item {% if request.endpoint == 'object.index' %}active{% endif %}">
+                            객체 관리
+                        </a>
+                    </li>
                 </ul>
             </nav>
 

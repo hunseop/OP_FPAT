@@ -8,6 +8,7 @@
 @import url('../css/modules/policy.css');
 @import url('../css/modules/analysis.css');
 @import url('../css/modules/firewall.css');
+@import url('../css/modules/object.css');
 
 /* 전역 CSS 변수 */
 :root {
