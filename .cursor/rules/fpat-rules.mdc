@@ -1,0 +1,59 @@
+---
+description: 
+globs: 
+---
+Flask Development Guidelines
+
+Core Principles
+	•	Write structured and maintainable Python and Flask code.
+	•	Keep the code concise and readable, avoiding unnecessary complexity.
+	•	Minimize repetition by using modular functions and utilities.
+	•	Prefer functional programming over unnecessary class usage (except for Flask views).
+	•	Follow consistent naming conventions (e.g., snake_case for variables, functions, and files).
+	•	Avoid deeply nested conditionals by using early returns and guard clauses.
+
+Python / Flask
+	•	Always use def for function definitions and include type hints where possible.
+	•	Organize code using Flask Blueprints for better modularization.
+	•	Flask-RESTful is optional—use it when an API-first approach is needed; otherwise, default to Flask routes.
+	•	Leverage Flask request lifecycle hooks (before_request, after_request, teardown_request) where applicable.
+	•	Use Flask’s configuration object to manage different environments (development, testing, production).
+
+Error Handling & Validation
+	•	Handle errors and edge cases early to improve readability and maintainability.
+	•	Use early return patterns to avoid deeply nested if statements.
+	•	Avoid unnecessary else statements when an if condition returns early.
+	•	Implement consistent error logging and provide clear, user-friendly error messages.
+	•	Use custom exception classes when necessary for structured error handling.
+
+Dependencies & Extensions
+	•	Essential libraries:
+	•	Flask - Web framework
+	•	Flask-SQLAlchemy - ORM for database management
+	•	Flask-Migrate - Database migration management
+	•	Marshmallow - Serialization and validation
+	•	Flask-Caching - Caching for performance optimization (if needed)
+	•	Excluded components:
+	•	Flask-JWT-Extended (Authentication/authorization not required)
+	•	Gunicorn/uWSGI (Not needed due to PyInstaller deployment)
+	•	Celery (No background tasks required)
+
+Performance Optimization
+	•	Use Flask-Caching to reduce redundant API calls when applicable.
+	•	Optimize database queries by implementing indexing and efficient querying.
+	•	Manage database sessions properly to prevent connection leaks.
+	•	While using SQLite, design ORM models with future scalability in mind.
+
+API & Data Handling
+	•	Flask-RESTful is optional—use it for API-driven development; otherwise, stick to basic Flask routes.
+	•	Use Marshmallow for consistent serialization, deserialization, and input validation.
+	•	Ensure strict input validation to prevent unexpected errors.
+
+Testing & Deployment
+	•	Use pytest and Flask’s test client for writing unit and integration tests.
+	•	Implement test fixtures for database and application setup.
+	•	Deploy the application as a standalone executable using PyInstaller.
+
+Environment Management
+	•	Use environment variables for sensitive configurations (e.g., database paths, API keys).
+	•	Store configurations in a .env file and load them appropriately.
