@@ -1,6 +1,14 @@
 from datetime import datetime
 from app import db
 
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class Firewall(db.Model):
     """방화벽 정보를 저장하는 모델"""
     id = db.Column(db.Integer, primary_key=True)
@@ -90,4 +98,33 @@ class ServiceGroup(db.Model):
     name = db.Column(db.String(100), nullable=False)
     members = db.Column(db.Text)  # 콤마로 구분된 멤버 목록
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class AuditLog(db.Model):
+    """감사 로그를 저장하는 모델"""
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    action = db.Column(db.String(50), nullable=False, index=True)  # sync, add, edit, delete
+    target_type = db.Column(db.String(50), nullable=False, index=True)  # firewall, policy, object
+    target_id = db.Column(db.Integer, index=True)
+    target_name = db.Column(db.String(100))
+    status = db.Column(db.String(20), index=True)  # success, failed
+    details = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    ip_address = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('audit_logs', lazy=True))
+
+class Notification(db.Model):
+    """알림을 저장하는 모델"""
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    type = db.Column(db.String(20), nullable=False)  # success, error, info, warning
+    title = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True)) 

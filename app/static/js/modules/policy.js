@@ -1,4 +1,5 @@
 import { Notification } from './notification.js';
+import { Modal } from './modal.js';
 
 export const Policy = {
     filters: [],
@@ -18,6 +19,11 @@ export const Policy = {
         // 페이지 언로드 시 상태 저장
         window.addEventListener('beforeunload', () => {
             this.saveStateToStorage();
+        });
+
+        // 필터 추가 콜백 설정
+        Modal.setFilterCallback((column, operator, value) => {
+            this.addFilter(column, operator, value);
         });
     },
 
@@ -45,32 +51,7 @@ export const Policy = {
     },
 
     initializeFilters() {
-        const addFilterBtn = document.getElementById('addFilterBtn');
         const resetFilterBtn = document.getElementById('resetFilterBtn');
-        const filterModal = document.getElementById('filterModal');
-        const closeBtn = filterModal.querySelector('.close-btn');
-        const cancelFilterBtn = document.getElementById('cancelFilterBtn');
-        const addFilterConditionBtn = document.getElementById('addFilterConditionBtn');
-        const filterColumn = document.getElementById('filterColumn');
-        const filterOperator = document.getElementById('filterOperator');
-        const filterValueGroup = document.getElementById('filterValueGroup');
-        const filterSelectGroup = document.getElementById('filterSelectGroup');
-        const filterValue = document.getElementById('filterValue');
-        const filterSelect = document.getElementById('filterSelect');
-
-        // 필터 모달 이벤트
-        addFilterBtn.addEventListener('click', () => {
-            filterModal.classList.add('active');
-            this.resetFilterModal(filterValueGroup, filterSelectGroup, filterValue);
-        });
-
-        closeBtn.addEventListener('click', () => {
-            filterModal.classList.remove('active');
-        });
-
-        cancelFilterBtn.addEventListener('click', () => {
-            filterModal.classList.remove('active');
-        });
 
         // 필터 초기화 버튼 이벤트
         resetFilterBtn.addEventListener('click', () => {
@@ -78,52 +59,6 @@ export const Policy = {
             this.currentPage = 1;
             this.updateFilterDisplay();
             this.loadPolicies();
-        });
-
-        // 필터 컬럼 변경 이벤트
-        filterColumn.addEventListener('change', () => {
-            const column = filterColumn.value;
-            if (column === 'enabled') {
-                filterValueGroup.style.display = 'none';
-                filterSelectGroup.style.display = 'block';
-                filterSelect.innerHTML = `
-                    <option value="">선택하세요</option>
-                    <option value="활성">활성</option>
-                    <option value="비활성">비활성</option>
-                `;
-                filterOperator.value = 'equals';
-                filterOperator.disabled = true;
-            } else if (column === 'action') {
-                filterValueGroup.style.display = 'none';
-                filterSelectGroup.style.display = 'block';
-                filterSelect.innerHTML = `
-                    <option value="">선택하세요</option>
-                    <option value="허용">허용</option>
-                    <option value="차단">차단</option>
-                `;
-                filterOperator.value = 'equals';
-                filterOperator.disabled = true;
-            } else {
-                filterValueGroup.style.display = 'block';
-                filterSelectGroup.style.display = 'none';
-                filterOperator.disabled = false;
-            }
-        });
-
-        // 필터 추가 버튼 이벤트
-        addFilterConditionBtn.addEventListener('click', () => {
-            const column = filterColumn.value;
-            const operator = filterOperator.value;
-            const value = column === 'enabled' || column === 'action' ? 
-                filterSelect.value : filterValue.value;
-
-            if (!value) {
-                alert('필터 값을 입력해주세요.');
-                return;
-            }
-
-            this.addFilter(column, operator, value);
-            filterModal.classList.remove('active');
         });
 
         // 초기 필터 표시
@@ -287,7 +222,7 @@ export const Policy = {
                 <td>${policy.firewall_name}</td>
                 <td>${policy.seq}</td>
                 <td>${policy.name}</td>
-                <td><span class="badge ${policy.enabled === '활성' ? 'active' : 'inactive'}">${policy.enabled}</span></td>
+                <td>${renderStatusCell(policy.enabled === '활성')}</td>
                 <td>${policy.action}</td>
                 <td>${policy.source || '-'}</td>
                 <td>${policy.user || '-'}</td>
@@ -338,4 +273,9 @@ export const Policy = {
             console.error('정책 내보내기 중 오류:', error);
         }
     }
-}; 
+};
+
+// 상태 셀 렌더링 함수
+function renderStatusCell(enabled) {
+    return `<span class="badge ${enabled ? 'active' : 'inactive'}">${enabled ? '활성' : '비활성'}</span>`;
+} 

@@ -1,9 +1,10 @@
-from flask import jsonify, request, send_file, current_app
+from flask import Blueprint, jsonify, request, send_file, current_app
 from app import db
 from app.models import SecurityRule, Firewall
 import io
 import openpyxl
-from . import policy_bp as bp
+
+bp = Blueprint('policy_api', __name__)
 
 @bp.route('/list', methods=['GET'])
 def get_policies():

@@ -85,11 +85,7 @@
 
 /* 방화벽 테이블 */
 .firewall-table {
-    width: 100%;
-    background: var(--glass-background);
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    box-shadow: var(--glass-shadow);
+    composes: data-table;
 }
 
 .firewall-table table {
@@ -136,45 +132,26 @@
     vertical-align: middle;
 }
 
-/* 각 컬럼 너비 고정 */
+/* 각 컬럼 너비 설정 */
 .firewall-table th:nth-child(1),
 .firewall-table td:nth-child(1) {
-    width: 100px;
-    text-align: center;
+    width: 25%;
 }
 
 .firewall-table th:nth-child(2),
 .firewall-table td:nth-child(2) {
-    width: 25%;
+    width: 15%;
 }
 
 .firewall-table th:nth-child(3),
 .firewall-table td:nth-child(3) {
-    width: 15%;
+    width: 20%;
 }
 
 .firewall-table th:nth-child(4),
 .firewall-table td:nth-child(4) {
-    width: 20%;
-}
-
-.firewall-table th:nth-child(5),
-.firewall-table td:nth-child(5) {
-    width: calc(40% - 220px);
+    width: calc(40% - 120px);
     min-width: 150px;
-}
-
-.firewall-table th:last-child,
-.firewall-table td:last-child {
-    width: 120px;
-    text-align: center;
-}
-
-/* 상태 컬럼 */
-.firewall-table th:first-child,
-.firewall-table td:first-child {
-    width: 100px;
-    text-align: center;
 }
 
 /* 작업 컬럼 */
@@ -182,40 +159,6 @@
 .firewall-table td:last-child {
     width: 120px;
     text-align: center;
-}
-
-/* 상태 토글 버튼 */
-.status-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 70px;
-    height: 28px;
-    border: none;
-    border-radius: 14px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.status-toggle.active {
-    background: #dcfce7;
-    color: #15803d;
-}
-
-.status-toggle.active:hover {
-    background: #bbf7d0;
-}
-
-.status-toggle.inactive {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.status-toggle.inactive:hover {
-    background: #fecaca;
 }
 
 /* 동기화 상태 */
@@ -364,4 +307,32 @@
     align-items: center;
     gap: 4px;
     white-space: nowrap;
+}
+
+/* 삭제 모달 스타일 */
+.delete-message {
+    font-size: var(--font-md);
+    color: var(--text-color);
+    margin-bottom: var(--spacing-lg);
+    text-align: center;
+}
+
+.btn-danger {
+    background-color: #dc2626;
+    color: white;
+    border: 1px solid #b91c1c;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+}
+
+#deleteModal .modal-content {
+    max-width: 400px;
+}
+
+#deleteModal .form-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
 } 

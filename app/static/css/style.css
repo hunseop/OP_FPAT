@@ -1,5 +1,6 @@
 /* CSS 모듈 import */
 @import url('../css/modules/base.css');
+@import url('../css/modules/components.css');
 @import url('../css/modules/layout.css');
 @import url('../css/modules/notification.css');
 @import url('../css/modules/modal.css');

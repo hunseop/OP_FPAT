@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, send_file, curre
 from app import db
 from app.models import Firewall
 from app.services.sync_manager import sync_manager
+from app.services.audit_service import audit_service
 from app.utils.validators import validate_firewall_data
 from app.utils.file_handlers import allowed_file, handle_excel_upload
 import os
@@ -16,73 +17,74 @@ def index():
 
 @bp.route('/add', methods=['POST'])
 def add_firewall():
-    if not request.form:
-        return jsonify({
-            'success': False,
-            'error': '요청 데이터가 없습니다.'
-        })
-
-    data = {
-        'name': request.form.get('name'),
-        'type': request.form.get('type'),
-        'ip_address': request.form.get('ip'),
-        'username': request.form.get('username'),
-        'password': request.form.get('password')
-    }
-    
-    is_valid, errors = validate_firewall_data(data)
-    if not is_valid:
-        return jsonify({
-            'success': False,
-            'error': '입력값 검증 실패',
-            'details': errors
-        })
-
     try:
-        # 세션 시작 전에 중복 체크
-        existing_firewall = Firewall.query.filter(
-            (Firewall.name == data['name']) | 
-            (Firewall.ip_address == data['ip_address'])
-        ).first()
+        data = {
+            'name': request.form.get('name'),
+            'type': request.form.get('type'),
+            'ip_address': request.form.get('ip'),
+            'username': request.form.get('username'),
+            'password': request.form.get('password')
+        }
         
-        if existing_firewall:
-            return jsonify({
-                'success': False,
-                'error': '중복된 방화벽',
-                'details': ['동일한 이름 또는 IP 주소를 가진 방화벽이 이미 존재합니다.']
-            })
-
-        # 새 방화벽 생성
-        new_firewall = Firewall(
-            name=data['name'],
-            type=data['type'].lower(),
-            ip_address=data['ip_address'],
-            username=data['username'],
-            password=data['password']
-        )
+        error = validate_firewall_data(data)
+        if error:
+            return jsonify({'success': False, 'error': error})
         
-        db.session.add(new_firewall)
+        firewall = Firewall(**data)
+        db.session.add(firewall)
         db.session.commit()
 
-        return jsonify({'success': True})
+        # 감사 로그 기록
+        audit_service.log(
+            action='add',
+            target_type='firewall',
+            target_id=firewall.id,
+            target_name=firewall.name,
+            status='success'
+        )
         
+        return jsonify({'success': True})
     except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"방화벽 등록 중 오류 발생: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': '방화벽 등록 중 오류가 발생했습니다.',
-            'details': [str(e)]
-        })
+        # 감사 로그 기록 (실패)
+        audit_service.log(
+            action='add',
+            target_type='firewall',
+            target_id=None,
+            target_name=request.form.get('name'),
+            status='failed',
+            details=str(e)
+        )
+        return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/delete/<int:id>', methods=['POST'])
 def delete_firewall(id):
     try:
         firewall = Firewall.query.get_or_404(id)
+        name = firewall.name  # 삭제 전에 이름 저장
+        
         db.session.delete(firewall)
         db.session.commit()
+
+        # 감사 로그 기록
+        audit_service.log(
+            action='delete',
+            target_type='firewall',
+            target_id=id,
+            target_name=name,
+            status='success'
+        )
+        
         return jsonify({'success': True})
     except Exception as e:
+        # 감사 로그 기록 (실패)
+        audit_service.log(
+            action='delete',
+            target_type='firewall',
+            target_id=id,
+            target_name=firewall.name if firewall else 'unknown',
+            status='failed',
+            details=str(e)
+        )
         return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/edit/<int:id>', methods=['GET', 'POST'])
@@ -94,8 +96,7 @@ def edit_firewall(id):
             'name': firewall.name,
             'type': firewall.type,
             'ip_address': firewall.ip_address,
-            'username': firewall.username,
-            'password': firewall.password
+            'username': firewall.username
         })
     
     try:
@@ -103,43 +104,41 @@ def edit_firewall(id):
             'name': request.form.get('name'),
             'type': request.form.get('type'),
             'ip_address': request.form.get('ip'),
-            'username': request.form.get('username'),
-            'password': request.form.get('password')
+            'username': request.form.get('username')
         }
         
-        is_valid, errors = validate_firewall_data(data, is_edit=True)
-        if not is_valid:
-            return jsonify({
-                'success': False,
-                'error': '입력값 검증 실패',
-                'details': errors
-            })
-
-        existing_firewall = Firewall.query.filter(
-            Firewall.id != id,
-            (Firewall.name == data['name']) | 
-            (Firewall.ip_address == data['ip_address'])
-        ).first()
+        if request.form.get('password'):
+            data['password'] = request.form.get('password')
         
-        if existing_firewall:
-            return jsonify({
-                'success': False,
-                'error': '중복된 방화벽',
-                'details': ['동일한 이름 또는 IP 주소를 가진 방화벽이 이미 존재합니다.']
-            })
-
-        firewall.name = data['name']
-        firewall.type = data['type'].lower()
-        firewall.ip_address = data['ip_address']
-        firewall.username = data['username']
-        if data['password']:
-            firewall.password = data['password']
+        error = validate_firewall_data(data, id)
+        if error:
+            return jsonify({'success': False, 'error': error})
+        
+        for key, value in data.items():
+            setattr(firewall, key, value)
         
         db.session.commit()
-        return jsonify({'success': True})
+
+        # 감사 로그 기록
+        audit_service.log(
+            action='edit',
+            target_type='firewall',
+            target_id=firewall.id,
+            target_name=firewall.name,
+            status='success'
+        )
         
+        return jsonify({'success': True})
     except Exception as e:
-        db.session.rollback()
+        # 감사 로그 기록 (실패)
+        audit_service.log(
+            action='edit',
+            target_type='firewall',
+            target_id=id,
+            target_name=firewall.name,
+            status='failed',
+            details=str(e)
+        )
         return jsonify({'success': False, 'error': str(e)})
 
 @bp.route('/template')

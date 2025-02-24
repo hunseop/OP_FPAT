@@ -99,8 +99,8 @@
 
 /* 정책 테이블 */
 .policy-table {
-    width: 100%;
-    min-width: 2000px;  /* 테이블 최소 너비 */
+    composes: data-table;
+    min-width: 2000px;
 }
 
 .policy-table table {

@@ -9,6 +9,7 @@ export const Firewall = {
         this.initializeFilters();
         this.initializeStatusToggle();
         Modal.initializeEditButtons();
+        Modal.initializeDeleteButtons();
     },
 
     initializeSync() {
@@ -16,16 +17,15 @@ export const Firewall = {
             btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
                 const row = btn.closest('tr');
-                const firewallName = row.cells[1].textContent;
+                const firewallName = row.cells[0].textContent;  // 첫 번째 열이 이름
                 const statusCell = row.querySelector('.sync-status');
-                const originalText = statusCell.textContent;
                 
                 if (btn.disabled) {
                     Notification.addNotification('info', '동기화 진행 중', `${firewallName} 방화벽이 이미 동기화 중입니다.`);
                     return;
                 }
                 
-                await this.startSync(id, firewallName, statusCell, btn, originalText);
+                await this.startSync(id, firewallName, statusCell, btn);
             });
         });
     },
@@ -44,9 +44,9 @@ export const Firewall = {
             const rows = tbody.getElementsByTagName('tr');
 
             Array.from(rows).forEach(row => {
-                const nameCell = row.cells[1];  // 이름 컬럼
-                const typeCell = row.cells[2];  // 타입 컬럼
-                const ipCell = row.cells[3];    // IP 컬럼
+                const nameCell = row.cells[0];  // 이름 컬럼
+                const typeCell = row.cells[1];  // 타입 컬럼
+                const ipCell = row.cells[2];    // IP 컬럼
                 
                 const name = nameCell.textContent.toLowerCase();
                 const type = typeCell.textContent.toLowerCase();
@@ -132,7 +132,7 @@ export const Firewall = {
         });
     },
 
-    async startSync(id, firewallName, statusCell, button, originalText) {
+    async startSync(id, firewallName, statusCell, button) {
         try {
             button.disabled = true;
             button.classList.add('syncing');
@@ -144,16 +144,16 @@ export const Firewall = {
 
             if (data.success) {
                 statusCell.innerHTML = '<span class="sync-progress">동기화 중... <span class="progress-value">0</span>%</span>';
-                this.checkProgress(id, firewallName, statusCell, button, originalText);
+                this.checkProgress(id, firewallName, statusCell, button);
             } else {
                 throw new Error(data.error);
             }
         } catch (error) {
-            this.handleSyncError(firewallName, statusCell, button, originalText, error);
+            this.handleSyncError(firewallName, statusCell, button, error);
         }
     },
 
-    async checkProgress(id, firewallName, statusCell, button, originalText) {
+    async checkProgress(id, firewallName, statusCell, button) {
         try {
             const response = await fetch(`/api/firewall/sync/status/${id}`);
             const data = await response.json();
@@ -165,16 +165,16 @@ export const Firewall = {
                 setTimeout(() => location.reload(), 1000);
             } else if (data.status === 'syncing') {
                 statusCell.querySelector('.progress-value').textContent = data.progress || 0;
-                setTimeout(() => this.checkProgress(id, firewallName, statusCell, button, originalText), 1000);
+                setTimeout(() => this.checkProgress(id, firewallName, statusCell, button), 1000);
             } else if (data.status === 'failed') {
-                this.handleSyncError(firewallName, statusCell, button, originalText, data.error || '동기화 실패');
+                this.handleSyncError(firewallName, statusCell, button, data.error || '동기화 실패');
             }
         } catch (error) {
-            this.handleSyncError(firewallName, statusCell, button, originalText, '상태 확인 중 오류가 발생했습니다.');
+            this.handleSyncError(firewallName, statusCell, button, '상태 확인 중 오류가 발생했습니다.');
         }
     },
 
-    handleSyncError(firewallName, statusCell, button, originalText, error) {
+    handleSyncError(firewallName, statusCell, button, error) {
         Notification.addNotification('error', '동기화 실패', `${firewallName} 방화벽 동기화 중 오류가 발생했습니다: ${error}`);
         statusCell.innerHTML = `실패 <span class="error-tooltip" title="${error}">ⓘ</span>`;
         statusCell.className = 'sync-status failed';

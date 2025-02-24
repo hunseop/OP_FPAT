@@ -37,10 +37,9 @@
     </div>
 
     <div class="firewall-list">
-        <table class="firewall-table">
+        <table class="firewall-table data-table">
             <thead>
                 <tr>
-                    <th>상태</th>
                     <th data-sort="name">이름 <span class="sort-icon">↕</span></th>
                     <th data-sort="type">타입 <span class="sort-icon">↕</span></th>
                     <th data-sort="ip_address">IP <span class="sort-icon">↕</span></th>
@@ -51,11 +50,6 @@
             <tbody id="firewallTableBody">
                 {% for firewall in firewalls %}
                 <tr>
-                    <td>
-                        <button class="status-toggle {% if firewall.is_active %}active{% else %}inactive{% endif %}" data-id="{{ firewall.id }}">
-                            {% if firewall.is_active %}활성{% else %}비활성{% endif %}
-                        </button>
-                    </td>
                     <td>{{ firewall.name }}</td>
                     <td>{{ firewall.type_display }}</td>
                     <td>{{ firewall.ip_address }}</td>
@@ -69,7 +63,7 @@
                                 <span class="error-tooltip" title="{{ firewall.last_sync_error }}">ⓘ</span>
                                 {% endif %}
                             {% else %}
-                                {{ firewall.last_sync.strftime('%Y-%m-%d %H:%M') }}
+                                {{ firewall.last_sync.strftime('%Y-%m-%d %H:%M') if firewall.last_sync else '-' }}
                             {% endif %}
                         </span>
                     </td>
@@ -163,6 +157,23 @@
                     <button type="submit" class="btn btn-primary">업로드</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- 삭제 확인 모달 추가 -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>방화벽 삭제</h3>
+            <button class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="delete-message">정말로 "<span id="deleteFirewallName"></span>" 방화벽을 삭제하시겠습니까?</p>
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" id="cancelDeleteBtn">취소</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">삭제</button>
+            </div>
         </div>
     </div>
 </div>
