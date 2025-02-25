@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect, url_for
 from app.models import Firewall, SecurityRule, NetworkObject, NetworkGroup, ServiceObject, ServiceGroup
 
 bp = Blueprint('main', __name__)
@@ -36,4 +36,9 @@ def policy():
 
 @bp.route('/analysis')
 def analysis():
-    return render_template('analysis/index.html', title='정책 분석') 
+    return render_template('analysis/index.html', title='정책 분석')
+
+@bp.route('/policy_manager')
+def policy_manager():
+    """정책 관리자 페이지로 리디렉션합니다."""
+    return redirect(url_for('analysis.policy_manager')) 

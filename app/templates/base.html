@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - FPAT</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="layout">
@@ -29,6 +30,11 @@
                     <li>
                         <a href="{{ url_for('main.analysis') }}" class="nav-item {% if request.endpoint == 'main.analysis' %}active{% endif %}">
                             정책 분석
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('analysis.policy_manager') }}" class="nav-item {% if request.endpoint == 'analysis.policy_manager' %}active{% endif %}">
+                            정책 관리자
                         </a>
                     </li>
                     <li>
@@ -73,5 +79,6 @@
         </main>
     </div>
     <script src="{{ url_for('static', filename='js/main.js') }}" type="module"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

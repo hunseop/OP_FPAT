@@ -4,7 +4,8 @@ import time
 import logging
 from datetime import datetime, UTC
 import pandas as pd
-from app import app, db
+from flask import current_app
+from app import db
 from app.models import (
     Firewall, SecurityRule, NetworkObject, 
     NetworkGroup, ServiceObject, ServiceGroup
@@ -18,21 +19,27 @@ class SyncManager:
         self._sync_queue = Queue()
         self._active_syncs = {}
         self._lock = Lock()
+        self._worker = None
+        self._app = None
+    
+    def init_app(self, app):
+        """Flask 애플리케이션 초기화"""
+        self._app = app
         self._worker = Thread(target=self._process_queue, daemon=True)
         self._worker.start()
-        self._recover_pending_syncs()
+        with app.app_context():
+            self._recover_pending_syncs()
     
     def _recover_pending_syncs(self):
         """서버 재시작 시 pending 상태의 동기화 복구"""
-        with app.app_context():
-            try:
-                pending_firewalls = Firewall.query.filter_by(sync_status='pending').all()
-                for firewall in pending_firewalls:
-                    firewall.sync_status = 'failed'
-                    firewall.last_sync_error = '서버 재시작으로 인한 동기화 중단'
-                db.session.commit()
-            except Exception as e:
-                logger.error(f"pending 상태 복구 중 오류 발생: {str(e)}")
+        try:
+            pending_firewalls = Firewall.query.filter_by(sync_status='pending').all()
+            for firewall in pending_firewalls:
+                firewall.sync_status = 'failed'
+                firewall.last_sync_error = '서버 재시작으로 인한 동기화 중단'
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"pending 상태 복구 중 오류 발생: {str(e)}")
     
     def _process_queue(self):
         """동기화 큐 처리"""
@@ -56,7 +63,7 @@ class SyncManager:
         """동기화 실행"""
         logger.info(f"방화벽 {firewall_id} 동기화 시작")
         try:
-            with app.app_context():
+            with current_app.app_context():
                 firewall = db.session.get(Firewall, firewall_id)
                 if not firewall:
                     logger.error(f"방화벽 {firewall_id}를 찾을 수 없음")
@@ -208,7 +215,7 @@ class SyncManager:
         except Exception as e:
             logger.error(f"방화벽 {firewall_id} 동기화 실패: {str(e)}")
             try:
-                with app.app_context():
+                with current_app.app_context():
                     firewall = db.session.get(Firewall, firewall_id)
                     if firewall:
                         firewall.sync_status = 'failed'
@@ -228,7 +235,7 @@ class SyncManager:
             if firewall_id in self._active_syncs:
                 return False, "이미 동기화가 진행 중입니다."
 
-        with app.app_context():
+        with current_app.app_context():
             firewall = db.session.get(Firewall, firewall_id)
             if not firewall:
                 return False, "방화벽을 찾을 수 없습니다."
@@ -245,7 +252,7 @@ class SyncManager:
             if firewall_id in self._active_syncs:
                 return self._active_syncs[firewall_id]
             
-        with app.app_context():
+        with current_app.app_context():
             firewall = db.session.get(Firewall, firewall_id)
             if firewall:
                 return {
